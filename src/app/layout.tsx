@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { Fraunces, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthModalProvider } from "@/components/auth/AuthModalProvider";
 
-// Serif for headings - medical authority and sophistication
-const plexSerif = IBM_Plex_Serif({
-  variable: "--font-heading",
+// Display font for hero headlines - distinctive and bold
+const fraunces = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-// Sans-serif for body - clarity and readability
-const inter = Inter({
+// Sans-serif for body and headings - clean but distinctive (NOT Inter!)
+const dmSans = DM_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -38,9 +39,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body
-        className={`${plexSerif.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
-        {children}
+        <AuthModalProvider>
+          {children}
+        </AuthModalProvider>
       </body>
     </html>
   );

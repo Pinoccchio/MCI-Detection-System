@@ -65,25 +65,32 @@ export function HowItWorks() {
     <section
       id="how-it-works"
       ref={containerRef}
-      className="py-24 bg-gradient-to-b from-accent/5 via-background to-background relative overflow-hidden"
+      className="py-24 bg-gradient-to-b from-accent/10 via-background to-background relative overflow-hidden"
     >
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+        {/* Subtle gradient orbs */}
+        <div className="absolute top-1/4 left-0 w-96 h-96 bg-primary/12 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
+
+        {/* Medical Cross Pattern - Bottom Left */}
+        <svg className="absolute bottom-40 left-40 w-48 h-48 opacity-[0.05]" viewBox="0 0 100 100">
+          <rect x="40" y="20" width="20" height="60" fill="rgb(245, 158, 11)" />
+          <rect x="20" y="40" width="60" height="20" fill="rgb(245, 158, 11)" />
+        </svg>
       </div>
 
       <motion.div
         style={{ opacity }}
         className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10"
       >
-        {/* Section Header */}
+        {/* Section Header with Enhanced Reveal */}
         <div className="text-center max-w-3xl mx-auto mb-20">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, y: 40, scale: 0.9 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, type: "spring", stiffness: 100, damping: 15 }}
           >
             <h2 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl text-foreground mb-4">
               How It Works
@@ -112,15 +119,15 @@ export function HowItWorks() {
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  transition={{ duration: 0.8, delay: index * 0.15, type: "spring", stiffness: 80 }}
                   className={`relative grid lg:grid-cols-2 gap-8 items-center ${
                     isEven ? "" : "lg:direction-rtl"
                   }`}
                 >
                   {/* Content */}
                   <div
-                    className={`${
-                      isEven ? "lg:text-right lg:pr-16" : "lg:pl-16 lg:col-start-2"
+                    className={`text-center lg:text-left flex flex-col items-center lg:items-start ${
+                      isEven ? "lg:text-right lg:pr-16 lg:items-end" : "lg:pl-16 lg:col-start-2"
                     }`}
                   >
                     <div className="inline-block mb-4">
@@ -147,17 +154,25 @@ export function HowItWorks() {
                     }`}
                   >
                     <motion.div
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{
+                        scale: 1.05,
+                        rotateY: isEven ? 5 : -5,
+                        rotateX: 3,
+                      }}
                       transition={{ type: "spring", stiffness: 300 }}
                       className="relative"
+                      style={{ perspective: 1000, transformStyle: "preserve-3d" }}
                     >
                       {/* Glow Effect */}
                       <div
                         className={`absolute inset-0 bg-gradient-to-br ${step.color} opacity-20 rounded-2xl blur-2xl`}
                       />
 
-                      {/* Card */}
-                      <div className="relative bg-card border-2 border-border rounded-2xl shadow-xl overflow-hidden min-h-[280px]">
+                      {/* Card with Glass Morphism */}
+                      <div className="relative bg-card/40 backdrop-blur-md border-2 border-border/50 rounded-2xl shadow-xl overflow-hidden min-h-[280px]">
+                        {/* Glass morphism overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/40 to-transparent pointer-events-none" />
+
                         {/* Background Pattern */}
                         <div className="absolute inset-0 opacity-[0.03]">
                           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8882_1px,transparent_1px),linear-gradient(to_bottom,#8882_1px,transparent_1px)] bg-[size:1.5rem_1.5rem]" />
@@ -405,7 +420,7 @@ export function HowItWorks() {
                     initial={{ scale: 0 }}
                     whileInView={{ scale: 1 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: index * 0.1 + 0.2 }}
+                    transition={{ duration: 0.5, delay: index * 0.15 + 0.3, type: "spring", stiffness: 200 }}
                     className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                   >
                     <div
@@ -423,7 +438,7 @@ export function HowItWorks() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.8, delay: 0.3, type: "spring", stiffness: 100 }}
           className="mt-24 text-center"
         >
           <div className="inline-block bg-card border border-border rounded-2xl px-8 py-6 shadow-lg">

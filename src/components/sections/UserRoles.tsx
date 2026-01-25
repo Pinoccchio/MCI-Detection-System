@@ -62,20 +62,19 @@ const roles = [
 export function UserRoles() {
   return (
     <section id="roles" className="py-24 bg-background relative overflow-hidden">
-      {/* Background Decoration */}
+      {/* Background Decoration - Subtle Grid */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:4rem_4rem]" />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header */}
+        {/* Section Header with Enhanced Reveal */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, y: 40, scale: 0.9 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, type: "spring", stiffness: 100, damping: 15 }}
           >
             <h2 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl text-foreground mb-4">
               Tailored for Every User
@@ -98,20 +97,38 @@ export function UserRoles() {
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.6, delay: index * 0.15 }}
+                transition={{ duration: 0.8, delay: index * 0.2, type: "spring", stiffness: 80 }}
+                whileHover={{
+                  scale: 1.03,
+                  rotateY: 8,
+                  rotateX: 8,
+                  transition: { duration: 0.4, ease: "easeOut" }
+                }}
+                style={{ perspective: 1000 }}
               >
-                <Card className="group h-full border-2 hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 bg-card/80 backdrop-blur-sm overflow-hidden">
+                <Card
+                  className="group h-full border-2 border-border/50 hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 bg-card/40 backdrop-blur-md overflow-hidden relative"
+                  style={{ transformStyle: "preserve-3d" }}
+                >
+                  {/* Glass morphism overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/40 to-transparent pointer-events-none" />
                   {/* Gradient Header */}
                   <div
                     className={`h-2 bg-gradient-to-r ${role.gradient}`}
                   />
 
-                  <CardHeader className="pb-4">
-                    {/* Icon - Large and Prominent */}
+                  <CardHeader className="pb-4 relative z-10">
+                    {/* Icon - Large and Prominent with Enhanced Micro-interactions */}
                     <div className="mb-6 flex justify-center">
                       <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        transition={{ type: "spring", stiffness: 300 }}
+                        whileHover={{
+                          scale: 1.1,
+                          rotate: [0, -8, 8, -8, 0],
+                          transition: {
+                            rotate: { duration: 0.6, ease: "easeInOut" },
+                            scale: { duration: 0.3 }
+                          }
+                        }}
                         className="relative"
                       >
                         {/* Glow effect */}

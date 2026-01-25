@@ -6,9 +6,11 @@ import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuthModal } from "@/components/auth/AuthModalProvider";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { openSignIn, openSignUp } = useAuthModal();
   const { scrollY } = useScroll();
   const headerBackground = useTransform(
     scrollY,
@@ -92,10 +94,10 @@ export function Header() {
 
             {/* Desktop CTA Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={openSignIn}>
                 Sign In
               </Button>
-              <Button size="sm" className="shadow-lg shadow-primary/25">
+              <Button size="sm" className="shadow-lg shadow-primary/25" onClick={openSignUp}>
                 Get Started
               </Button>
             </div>
@@ -164,10 +166,25 @@ export function Header() {
             transition={{ duration: 0.3, delay: 0.3 }}
             className="flex flex-col gap-3 mt-4"
           >
-            <Button variant="outline" size="lg" className="w-full">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                openSignIn();
+              }}
+            >
               Sign In
             </Button>
-            <Button size="lg" className="w-full shadow-lg shadow-primary/25">
+            <Button
+              size="lg"
+              className="w-full shadow-lg shadow-primary/25"
+              onClick={() => {
+                setIsMenuOpen(false);
+                openSignUp();
+              }}
+            >
               Get Started
             </Button>
           </motion.div>

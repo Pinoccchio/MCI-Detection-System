@@ -12,13 +12,11 @@ export function Footer() {
       { label: "Features", href: "#features" },
       { label: "How It Works", href: "#how-it-works" },
       { label: "User Roles", href: "#roles" },
-      { label: "Pricing", href: "#pricing" },
     ],
     company: [
       { label: "About Us", href: "#about" },
-      { label: "Research", href: "#research" },
-      { label: "Contact", href: "#contact" },
-      { label: "Careers", href: "#careers" },
+      { label: "Research", href: "/research" },
+      { label: "Contact", href: "/contact" },
     ],
     legal: [
       { label: "Privacy Policy", href: "/privacy" },
@@ -157,25 +155,6 @@ export function Footer() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Medical Disclaimer */}
-        <div className="border-t border-border py-8">
-          <div className="bg-amber-500/10 border-l-4 border-amber-500 rounded-lg p-4 mb-8">
-            <h5 className="font-heading font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
-              <span className="text-amber-500">⚠️</span>
-              Medical Disclaimer
-            </h5>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              The MCI Detection System is designed as a clinical decision-support
-              tool and is not intended to replace professional medical diagnosis,
-              treatment, or clinical judgment. All diagnostic decisions should be
-              made by qualified healthcare professionals. This system is
-              currently under development and has not received FDA clearance or
-              approval. Results should be interpreted in conjunction with other
-              clinical findings and patient history.
-            </p>
           </div>
         </div>
 
