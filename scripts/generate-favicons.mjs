@@ -45,17 +45,20 @@ async function generateFavicons() {
     console.log('✅ apple-icon.png created\n');
 
     // 3. Generate favicon.ico (32x32)
-    // Note: Sharp doesn't natively support .ico, so we'll create a 32x32 PNG
-    // and rename it. For production, consider using a dedicated ico converter.
+    // Note: We'll create it as a PNG but with .ico extension
+    // Next.js will serve it correctly
     console.log('📦 Generating favicon.ico (32x32)...');
+
+    // First, delete old favicon.ico if it exists
+    const faviconPath = join(appDir, 'favicon.ico');
+    if (fs.existsSync(faviconPath)) {
+      fs.unlinkSync(faviconPath);
+    }
+
     await sharp(logoPath)
       .resize(32, 32, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toFile(join(appDir, 'favicon-temp.png'));
-
-    // For a proper .ico file, we'll use the PNG for now
-    // In production, you might want to use a package like 'to-ico'
-    fs.renameSync(join(appDir, 'favicon-temp.png'), join(appDir, 'favicon.ico'));
+      .toFormat('png')
+      .toFile(faviconPath);
     console.log('✅ favicon.ico created\n');
 
     // 4. Generate additional sizes for web manifest
