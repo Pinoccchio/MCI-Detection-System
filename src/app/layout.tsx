@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthModalProvider } from "@/components/auth/AuthModalProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 // Display font for hero headlines - distinctive and bold
 const fraunces = Fraunces({
@@ -44,6 +45,7 @@ export default function RootLayout({
         <AuthModalProvider>
           {children}
         </AuthModalProvider>
+        <Analytics />
       </body>
     </html>
   );
