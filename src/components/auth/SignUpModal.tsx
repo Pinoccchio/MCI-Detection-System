@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UserPlus } from "lucide-react";
+import { UserPlus, CheckCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { signUpSchema, type SignUpFormData, roleOptions } from "@/lib/validations/auth";
+import { signUp } from "@/lib/auth/actions";
+import { UserRole } from "@/types/database";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +33,12 @@ export function SignUpModal({
   onOpenChange,
   onSwitchToSignIn,
 }: SignUpModalProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [requiresConfirmation, setRequiresConfirmation] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -50,29 +59,45 @@ export function SignUpModal({
   });
 
   const onSubmit = async (data: SignUpFormData) => {
-    // Mock submission for now
-    console.log("Sign Up Data:", data);
+    try {
+      setError(null);
+      setSuccess(false);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Call Supabase auth sign up action
+      const result = await signUp(
+        data.email,
+        data.password,
+        data.fullName,
+        data.role as UserRole,
+        data.institution,
+        data.contactNumber
+      );
 
-    // TODO: Implement Supabase authentication
-    // const { data: authData, error } = await supabase.auth.signUp({
-    //   email: data.email,
-    //   password: data.password,
-    //   options: {
-    //     data: {
-    //       full_name: data.fullName,
-    //       role: data.role,
-    //       institution: data.institution,
-    //       contact_number: data.contactNumber,
-    //     },
-    //   },
-    // });
+      if (!result.success && result.error) {
+        setError(result.error);
+        return;
+      }
 
-    alert("Sign up successful! (Mock)");
-    reset();
-    onOpenChange(false);
+      // Success
+      setSuccess(true);
+      setRequiresConfirmation(result.requiresEmailConfirmation || false);
+
+      // If email confirmation required, show message and keep modal open
+      if (result.requiresEmailConfirmation) {
+        // Don't close modal - user needs to see confirmation message
+        return;
+      }
+
+      // Otherwise redirect to sign in after short delay
+      setTimeout(() => {
+        reset();
+        onOpenChange(false);
+        onSwitchToSignIn();
+      }, 2000);
+    } catch (err: any) {
+      console.error('Sign up error:', err);
+      setError(err.message || 'An unexpected error occurred');
+    }
   };
 
   const handleSwitchToSignIn = () => {
@@ -98,7 +123,35 @@ export function SignUpModal({
         </DialogHeader>
 
         <DialogBody>
+          {/* Success Message */}
+          {success && (
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 mb-5">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">Account created successfully!</p>
+                  {requiresConfirmation ? (
+                    <p className="text-sm mt-1">
+                      Please check your email to confirm your account before signing in.
+                    </p>
+                  ) : (
+                    <p className="text-sm mt-1">
+                      Redirecting to sign in...
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Error Alert */}
+            {error && (
+              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Full Name */}
               <div className="space-y-2 md:col-span-2">
@@ -147,13 +200,27 @@ export function SignUpModal({
                 <Label htmlFor="password" required>
                   Password
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Min. 8 characters"
-                  error={errors.password?.message}
-                  {...register("password")}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min. 8 characters"
+                    error={errors.password?.message}
+                    {...register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Confirm Password */}
@@ -161,13 +228,27 @@ export function SignUpModal({
                 <Label htmlFor="confirmPassword" required>
                   Confirm Password
                 </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Re-enter password"
-                  error={errors.confirmPassword?.message}
-                  {...register("confirmPassword")}
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter password"
+                    error={errors.confirmPassword?.message}
+                    {...register("confirmPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Role Selection */}

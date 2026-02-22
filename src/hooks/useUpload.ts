@@ -96,7 +96,7 @@ export function useUpload() {
         });
 
         // Send request
-        xhr.open('POST', `${API_BASE_URL}/api/v1/predict`);
+        xhr.open('POST', `${API_BASE_URL}/predict`);
         xhr.send(formData);
       });
 

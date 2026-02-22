@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LogIn } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogIn, Eye, EyeOff } from "lucide-react";
 import { signInSchema, type SignInFormData } from "@/lib/validations/auth";
+import { signIn } from "@/lib/auth/actions";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +31,10 @@ export function SignInModal({
   onOpenChange,
   onSwitchToSignUp,
 }: SignInModalProps) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -43,21 +50,26 @@ export function SignInModal({
   });
 
   const onSubmit = async (data: SignInFormData) => {
-    // Mock submission for now
-    console.log("Sign In Data:", data);
+    try {
+      setError(null);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call Supabase auth sign in action
+      const result = await signIn(data.email, data.password);
 
-    // TODO: Implement Supabase authentication
-    // const { data, error } = await supabase.auth.signInWithPassword({
-    //   email: data.email,
-    //   password: data.password,
-    // });
+      if (!result.success && result.error) {
+        setError(result.error);
+        return;
+      }
 
-    alert("Sign in successful! (Mock)");
-    reset();
-    onOpenChange(false);
+      // Success - close modal and redirect to dashboard
+      reset();
+      onOpenChange(false);
+      router.push('/dashboard');
+      router.refresh(); // Refresh to get updated auth state
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      setError(err.message || 'An unexpected error occurred');
+    }
   };
 
   const handleSwitchToSignUp = () => {
@@ -84,6 +96,13 @@ export function SignInModal({
 
         <DialogBody>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Error Alert */}
+            {error && (
+              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email" required>
@@ -103,13 +122,27 @@ export function SignInModal({
               <Label htmlFor="password" required>
                 Password
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                error={errors.password?.message}
-                {...register("password")}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  error={errors.password?.message}
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Remember Me & Forgot Password */}
