@@ -104,7 +104,13 @@ export async function uploadMRIScan(
   file: File
 ): Promise<UploadResult> {
   // Generate file path: patient_id/scan_id/filename
-  const extension = file.name.split('.').pop();
+  // Handle .nii.gz files (double extension)
+  let extension = '';
+  if (file.name.endsWith('.nii.gz')) {
+    extension = 'nii.gz';
+  } else {
+    extension = file.name.split('.').pop() || 'nii';
+  }
   const path = `${patientId}/${scanId}/scan.${extension}`;
 
   return uploadFile({

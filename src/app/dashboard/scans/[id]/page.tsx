@@ -56,7 +56,7 @@ export default async function ScanDetailPage({ params }: { params: Promise<{ id:
           <div>
             <h1 className="text-3xl font-bold">{scan.scan_type} Scan</h1>
             <p className="text-muted-foreground mt-1">
-              Scan ID: {params.id.slice(0, 8)}...
+              Scan ID: {id.slice(0, 8)}...
             </p>
           </div>
         </div>

@@ -82,10 +82,13 @@ export function AnalyzeInterface({ scans, preSelectedScan, userId }: AnalyzeInte
       // Step 3: Send to FastAPI backend
       setStatus('analyzing');
       const formData = new FormData();
-      formData.append('file', fileBlob, 'scan.nii.gz');
+
+      // Use the original filename from the scan's file_path
+      const originalFilename = selectedScan.file_path.split('/').pop() || 'scan.nii';
+      formData.append('file', fileBlob, originalFilename);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const predictResponse = await fetch(`${apiUrl}/predict`, {
+      const predictResponse = await fetch(`${apiUrl}/api/v1/predict`, {
         method: 'POST',
         body: formData,
       });

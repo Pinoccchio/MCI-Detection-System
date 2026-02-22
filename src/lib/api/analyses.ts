@@ -161,10 +161,6 @@ export async function getAnalysisById(id: string): Promise<{
             date_of_birth,
             gender
           )
-        ),
-        user_profiles(
-          full_name,
-          role
         )
       `
       )
@@ -177,6 +173,19 @@ export async function getAnalysisById(id: string): Promise<{
         analysis: null,
         error: error.message,
       };
+    }
+
+    // Fetch user profile separately if analyzed_by is set
+    if (data && data.analyzed_by) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, role')
+        .eq('id', data.analyzed_by)
+        .single();
+
+      if (profile) {
+        (data as any).user_profiles = profile;
+      }
     }
 
     return {

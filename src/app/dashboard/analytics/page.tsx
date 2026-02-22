@@ -12,6 +12,7 @@ import {
   getConfidenceDistribution,
   getFeatureImportance,
   getVolumetryStats,
+  getModelInfo,
 } from '@/lib/api/analytics';
 import { ModelMetricsComponent } from '@/components/analytics/ModelMetrics';
 import { ConfusionMatrixComponent } from '@/components/analytics/ConfusionMatrix';
@@ -41,6 +42,7 @@ export default async function AnalyticsPage() {
     confidenceDistribution,
     featureImportance,
     volumetryStats,
+    modelInfo,
   ] = await Promise.all([
     getModelMetrics(),
     getConfusionMatrix(),
@@ -48,6 +50,7 @@ export default async function AnalyticsPage() {
     getConfidenceDistribution(),
     getFeatureImportance(),
     getVolumetryStats(),
+    getModelInfo(),
   ]);
 
   return (
@@ -70,15 +73,26 @@ export default async function AnalyticsPage() {
         <div className="flex items-start gap-4">
           <Brain className="h-8 w-8 text-primary mt-1" />
           <div className="flex-1">
-            <h2 className="text-xl font-semibold mb-2">Random Forest Classifier</h2>
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className="text-xl font-semibold">{modelInfo.modelType}</h2>
+              {modelInfo.modelLoaded ? (
+                <span className="text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700">
+                  Model Loaded
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700">
+                  Offline Mode
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Model Version</p>
-                <p className="font-medium">1.0</p>
+                <p className="font-medium">{modelInfo.modelVersion}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Features</p>
-                <p className="font-medium">26 hippocampal features</p>
+                <p className="font-medium">{modelInfo.nFeatures} hippocampal features</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Training Accuracy</p>

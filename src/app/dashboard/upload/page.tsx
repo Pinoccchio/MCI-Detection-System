@@ -11,12 +11,15 @@ import { PatientSelector } from '@/components/scans/PatientSelector';
 import { Upload as UploadIcon } from 'lucide-react';
 
 interface UploadPageProps {
-  searchParams: {
+  searchParams: Promise<{
     patient?: string;
-  };
+  }>;
 }
 
 export default async function UploadPage({ searchParams }: UploadPageProps) {
+  // Await searchParams
+  const params = await searchParams;
+
   // Check authentication and role
   const user = await getCurrentUser();
 
@@ -31,7 +34,7 @@ export default async function UploadPage({ searchParams }: UploadPageProps) {
 
   // If patient ID provided, fetch that patient
   // Otherwise show patient selection
-  const preSelectedPatientId = searchParams.patient;
+  const preSelectedPatientId = params.patient;
 
   let selectedPatient = null;
   let allPatients = [];

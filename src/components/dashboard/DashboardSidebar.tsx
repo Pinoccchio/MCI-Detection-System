@@ -213,17 +213,20 @@ export function DashboardSidebar({ role }: DashboardSidebarProps) {
         <ul className="space-y-1">
           {filteredItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            // Check if current path matches this nav item (including nested routes)
+            // Special case for Overview (/dashboard) - only match exactly to avoid matching all routes
+            const isActive = item.href === '/dashboard'
+              ? pathname === '/dashboard'
+              : pathname === item.href || pathname.startsWith(item.href + '/');
 
             const navLink = (
               <Link
                 href={item.href}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
-                  'hover:bg-muted/50',
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground/80 hover:text-foreground',
+                    ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90'
+                    : 'text-foreground/80 hover:bg-muted/50 hover:text-foreground',
                   isCollapsed && 'justify-center'
                 )}
               >

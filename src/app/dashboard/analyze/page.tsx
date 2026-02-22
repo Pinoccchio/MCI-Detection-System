@@ -10,12 +10,15 @@ import { AnalyzeInterface } from '@/components/analyze/AnalyzeInterface';
 import { Brain } from 'lucide-react';
 
 interface AnalyzePageProps {
-  searchParams: {
+  searchParams: Promise<{
     scan?: string;
-  };
+  }>;
 }
 
 export default async function AnalyzePage({ searchParams }: AnalyzePageProps) {
+  // Await searchParams
+  const params = await searchParams;
+
   // Check authentication and role
   const user = await getCurrentUser();
 
@@ -32,8 +35,8 @@ export default async function AnalyzePage({ searchParams }: AnalyzePageProps) {
   const { scans } = await getScans({ status: 'completed' });
 
   // Find pre-selected scan if ID provided
-  const preSelectedScan = searchParams.scan
-    ? scans.find((s: any) => s.id === searchParams.scan)
+  const preSelectedScan = params.scan
+    ? scans.find((s: any) => s.id === params.scan)
     : null;
 
   return (

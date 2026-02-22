@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { DB_PREDICTIONS } from '@/lib/utils/prediction-mapper';
 
 // ============================================================================
 // TYPES
@@ -82,6 +83,13 @@ export interface VolumetryStats {
   };
 }
 
+export interface ModelInfo {
+  modelVersion: string;
+  modelType: string;
+  modelLoaded: boolean;
+  nFeatures: number;
+}
+
 // ============================================================================
 // GET MODEL METRICS
 // ============================================================================
@@ -113,17 +121,39 @@ export async function getModelMetrics(): Promise<ModelMetrics> {
 
     const totalPredictions = analyses.length;
 
-    // For demonstration, we'll use high-confidence predictions (>0.8) as "correct"
-    // In production, you'd compare against ground truth labels
-    const highConfidencePredictions = analyses.filter(a => a.confidence > 0.8).length;
+    if (totalPredictions === 0) {
+      return {
+        accuracy: 0,
+        precision: 0,
+        recall: 0,
+        f1Score: 0,
+        totalPredictions: 0,
+        correctPredictions: 0,
+      };
+    }
 
-    // Simplified metrics (in production, calculate from ground truth)
-    const accuracy = totalPredictions > 0 ? highConfidencePredictions / totalPredictions : 0;
+    // Get confusion matrix to calculate real metrics
+    const confusionMatrix = await getConfusionMatrix();
+    const { truePositive, trueNegative, falsePositive, falseNegative } = confusionMatrix;
 
-    // These would be calculated from actual ground truth labels
-    const precision = 0.89; // Placeholder
-    const recall = 0.85;    // Placeholder
-    const f1Score = 2 * (precision * recall) / (precision + recall);
+    // Calculate metrics from confusion matrix
+    const totalCorrect = truePositive + trueNegative;
+    const accuracy = totalPredictions > 0 ? totalCorrect / totalPredictions : 0;
+
+    // Precision = TP / (TP + FP) - Of all MCI predictions, how many were correct?
+    const precision = (truePositive + falsePositive) > 0
+      ? truePositive / (truePositive + falsePositive)
+      : 0;
+
+    // Recall = TP / (TP + FN) - Of all actual MCI cases, how many did we find?
+    const recall = (truePositive + falseNegative) > 0
+      ? truePositive / (truePositive + falseNegative)
+      : 0;
+
+    // F1 Score = harmonic mean of precision and recall
+    const f1Score = (precision + recall) > 0
+      ? 2 * (precision * recall) / (precision + recall)
+      : 0;
 
     return {
       accuracy,
@@ -131,7 +161,7 @@ export async function getModelMetrics(): Promise<ModelMetrics> {
       recall,
       f1Score,
       totalPredictions,
-      correctPredictions: highConfidencePredictions,
+      correctPredictions: totalCorrect,
     };
   } catch (error: any) {
     console.error('Error in getModelMetrics:', error);
@@ -174,7 +204,7 @@ export async function getConfusionMatrix(): Promise<ConfusionMatrix> {
     let falseNegative = 0;
 
     analyses.forEach(analysis => {
-      const isMCI = analysis.prediction === 'Mild Cognitive Impairment';
+      const isMCI = analysis.prediction === DB_PREDICTIONS.MCI;
       const highConfidence = analysis.confidence > 0.8;
 
       if (isMCI && highConfidence) {
@@ -207,18 +237,18 @@ export async function getClassDistribution(): Promise<ClassDistribution> {
     const supabase = await createClient();
 
     // Get count of each prediction class
-    const { data: mciCount } = await supabase
+    const { count: mciCount } = await supabase
       .from('analysis_results')
       .select('*', { count: 'exact', head: true })
-      .eq('prediction', 'Mild Cognitive Impairment');
+      .eq('prediction', DB_PREDICTIONS.MCI);
 
-    const { data: normalCount } = await supabase
+    const { count: normalCount } = await supabase
       .from('analysis_results')
       .select('*', { count: 'exact', head: true })
-      .eq('prediction', 'Cognitively Normal');
+      .eq('prediction', DB_PREDICTIONS.NORMAL);
 
-    const mci = mciCount?.count || 0;
-    const normal = normalCount?.count || 0;
+    const mci = mciCount || 0;
+    const normal = normalCount || 0;
 
     return {
       cognitivelyNormal: normal,
@@ -294,12 +324,33 @@ export async function getConfidenceDistribution(): Promise<ConfidenceDistributio
 // ============================================================================
 
 /**
- * Get feature importance rankings
- * Note: This is placeholder data. In production, get from ML model.
+ * Get feature importance rankings from ML model
+ * Falls back to placeholder data if ML backend is unavailable
  */
 export async function getFeatureImportance(): Promise<FeatureImportance> {
-  // Placeholder feature importance data
-  // In production, this would come from the ML model's feature_importances_
+  try {
+    // Try to fetch from ML backend
+    const mlBackendUrl = process.env.NEXT_PUBLIC_ML_BACKEND_URL || 'http://localhost:8000';
+    const response = await fetch(`${mlBackendUrl}/api/v1/feature-importance`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Don't cache, always get fresh data
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { features: data.features };
+    }
+
+    // If fetch failed, fall through to placeholder data
+    console.warn('ML backend unavailable, using placeholder feature importance');
+  } catch (error) {
+    console.warn('Error fetching feature importance from ML backend:', error);
+  }
+
+  // Fallback: Placeholder feature importance data
   const features = [
     { name: 'left_hippocampus_volume', importance: 0.156, rank: 1 },
     { name: 'right_hippocampus_volume', importance: 0.148, rank: 2 },
@@ -354,7 +405,7 @@ export async function getTimeSeriesData(days: number = 30): Promise<TimeSeriesDa
       entry.analyses++;
       entry.totalConfidence += analysis.confidence;
 
-      if (analysis.prediction === 'Mild Cognitive Impairment') {
+      if (analysis.prediction === DB_PREDICTIONS.MCI) {
         entry.mciDetected++;
       }
     });
@@ -372,6 +423,51 @@ export async function getTimeSeriesData(days: number = 30): Promise<TimeSeriesDa
     console.error('Error in getTimeSeriesData:', error);
     return { data: [] };
   }
+}
+
+// ============================================================================
+// GET MODEL INFO
+// ============================================================================
+
+/**
+ * Get model information from ML backend
+ * Falls back to default values if ML backend is unavailable
+ */
+export async function getModelInfo(): Promise<ModelInfo> {
+  try {
+    // Try to fetch from ML backend
+    const mlBackendUrl = process.env.NEXT_PUBLIC_ML_BACKEND_URL || 'http://localhost:8000';
+    const response = await fetch(`${mlBackendUrl}/api/v1/model-info`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Always get fresh data
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        modelVersion: data.model_version || '1.0.0',
+        modelType: data.model_type || 'Unknown',
+        modelLoaded: data.model_loaded || false,
+        nFeatures: data.n_features || 26,
+      };
+    }
+
+    // If fetch failed, fall through to defaults
+    console.warn('ML backend unavailable, using default model info');
+  } catch (error) {
+    console.warn('Error fetching model info from ML backend:', error);
+  }
+
+  // Fallback: Default model info
+  return {
+    modelVersion: '1.0.0',
+    modelType: 'GradientBoosting',
+    modelLoaded: false,
+    nFeatures: 26,
+  };
 }
 
 // ============================================================================

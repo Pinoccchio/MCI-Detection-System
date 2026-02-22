@@ -53,7 +53,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
           <div>
             <h1 className="text-3xl font-bold">Analysis Results</h1>
             <p className="text-muted-foreground mt-1">
-              ID: {params.id.slice(0, 8)}...
+              ID: {id.slice(0, 8)}...
             </p>
           </div>
         </div>
@@ -247,7 +247,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
             </div>
 
             <ReportGenerator
-              analysisId={params.id}
+              analysisId={id}
               analysisData={analysis}
               patientData={patient}
               scanData={scan}

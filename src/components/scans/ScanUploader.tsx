@@ -43,11 +43,20 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
 
   // Form fields
   const [scanType, setScanType] = useState('T1-weighted');
-  const [scanDate, setScanDate] = useState(new Date().toISOString().split('T')[0]);
+  // Get current datetime in local timezone for datetime-local input
+  const [scanDateTime, setScanDateTime] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
 
   // File validation
   const validateFile = (file: File): string | null => {
-    const maxSize = 500 * 1024 * 1024; // 500MB
+    const maxSize = 50 * 1024 * 1024; // 50MB (safe for free tier Supabase)
     const allowedExtensions = ['.dcm', '.nii', '.nii.gz', '.nrrd', '.mha', '.mhd'];
 
     if (file.size > maxSize) {
@@ -118,9 +127,12 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
       setUploadProgress(0);
 
       // Step 1: Create scan record in database
+      // Convert datetime-local to ISO timestamp
+      const scanDateISO = new Date(scanDateTime).toISOString();
+
       const scanData = {
         patient_id: patientId,
-        scan_date: new Date(scanDate).toISOString(),
+        scan_date: scanDateISO,
         scan_type: scanType,
         file_type: selectedFile.name.endsWith('.dcm') ? 'DICOM' :
                    selectedFile.name.endsWith('.nii') || selectedFile.name.endsWith('.nii.gz') ? 'NIfTI' :
@@ -220,11 +232,11 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Scan Date</label>
+          <label className="text-sm font-medium">Scan Date & Time</label>
           <input
-            type="date"
-            value={scanDate}
-            onChange={(e) => setScanDate(e.target.value)}
+            type="datetime-local"
+            value={scanDateTime}
+            onChange={(e) => setScanDateTime(e.target.value)}
             disabled={uploadStatus !== 'idle'}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background"
           />
