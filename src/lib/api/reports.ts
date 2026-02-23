@@ -287,6 +287,15 @@ export async function createReport(
     }
 
     // Create report record
+    console.log('[Reports API] Attempting to create report:', {
+      analysis_id: input.analysis_id,
+      report_type: input.report_type,
+      title: input.title,
+      pdf_path: pdfPath,
+      file_size: fileSize,
+      generated_by: user.id,
+    });
+
     const { data, error } = await supabase
       .from('reports')
       .insert({
@@ -301,12 +310,20 @@ export async function createReport(
       .single();
 
     if (error) {
-      console.error('[Reports API] Create error:', error.message);
+      console.error('[Reports API] Create error:', error);
+      console.error('[Reports API] Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       return {
         success: false,
-        error: error.message,
+        error: `Database insert failed: ${error.message}${error.hint ? ` (${error.hint})` : ''}`,
       };
     }
+
+    console.log('[Reports API] Report created successfully:', data);
 
     // Revalidate pages
     revalidatePath('/dashboard/reports');

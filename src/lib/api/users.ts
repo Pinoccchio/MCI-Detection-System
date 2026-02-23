@@ -40,6 +40,15 @@ export interface UpdateUserRoleInput {
   newRole: UserRole;
 }
 
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+  institution: string;
+  contact_number: string;
+}
+
 export interface OperationResult {
   success: boolean;
   error?: string;
@@ -224,17 +233,29 @@ export async function updateUserRole(input: UpdateUserRoleInput): Promise<Operat
 /**
  * Delete a user account
  * Admin only - Use with caution
+ * Deletes both the user_profiles record and auth.users record
  */
 export async function deleteUser(userId: string): Promise<OperationResult> {
   try {
     const supabaseAdmin = createServiceRoleClient();
 
-    // Delete user from auth (cascades to user_profiles via FK)
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    // Step 1: Delete user profile first (FK constraint doesn't have CASCADE)
+    const { error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId);
 
-    if (error) {
-      console.error('Error deleting user:', error);
-      return { success: false, error: error.message };
+    if (profileError) {
+      console.error('Error deleting user profile:', profileError);
+      return { success: false, error: profileError.message };
+    }
+
+    // Step 2: Delete user from auth
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (authError) {
+      console.error('Error deleting auth user:', authError);
+      return { success: false, error: authError.message };
     }
 
     revalidatePath('/dashboard/users');
@@ -289,5 +310,59 @@ export async function getUserById(userId: string): Promise<{ user: UserWithProfi
   } catch (error: any) {
     console.error('Error in getUserById:', error);
     return { user: null, error: error.message };
+  }
+}
+
+// ============================================================================
+// CREATE USER
+// ============================================================================
+
+/**
+ * Create a new user with auth account and profile
+ * Admin only
+ */
+export async function createUser(input: CreateUserInput): Promise<OperationResult & { userId?: string }> {
+  try {
+    const supabaseAdmin = createServiceRoleClient();
+
+    // Step 1: Create auth user (with email_confirm: true to skip verification)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: input.email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: input.full_name,
+        role: input.role,
+      }
+    });
+
+    if (authError) {
+      console.error('Error creating auth user:', authError);
+      return { success: false, error: authError.message };
+    }
+
+    // Step 2: Create profile record
+    const { error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .insert({
+        id: authData.user.id,
+        full_name: input.full_name,
+        role: input.role,
+        institution: input.institution,
+        contact_number: input.contact_number,
+      });
+
+    if (profileError) {
+      console.error('Error creating user profile:', profileError);
+      // Rollback: delete auth user if profile creation fails
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      return { success: false, error: profileError.message };
+    }
+
+    revalidatePath('/dashboard/users');
+    return { success: true, userId: authData.user.id };
+  } catch (error: any) {
+    console.error('Error in createUser:', error);
+    return { success: false, error: error.message };
   }
 }

@@ -7,9 +7,9 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { generateReportHTML, downloadReportAsPDF, downloadReportAsHTML } from '@/lib/pdf/generator';
+import { generateReportHTML } from '@/lib/pdf/generator';
 import { createReport } from '@/lib/api/reports';
-import { FileText, Download, Loader2, CheckCircle } from 'lucide-react';
+import { FileText, Loader2, CheckCircle } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -48,20 +48,7 @@ export function ReportGenerator({
       setStatus('generating');
       setError(null);
 
-      // Generate HTML report
-      const html = generateReportHTML({
-        analysis: analysisData,
-        patient: patientData,
-        scan: scanData,
-        generatedBy,
-        institutionName,
-        reportType,
-      });
-
-      // Generate filename
-      const filename = `MCI_Report_${patientData.patient_id}_${new Date().toISOString().split('T')[0]}`;
-
-      // Save report record to database
+      // Save report record to database first
       const reportData = {
         analysis_id: analysisId,
         report_type: reportType,
@@ -70,48 +57,28 @@ export function ReportGenerator({
           : `MCI Research Report - ${patientData.patient_id}`,
       };
 
+      console.log('[ReportGenerator] Creating report:', reportData);
       const result = await createReport(reportData);
 
-      if (result.success && result.data) {
-        setReportId(result.data.id);
+      if (!result.success) {
+        console.error('[ReportGenerator] Failed to create report:', result.error);
+        setError(result.error || 'Failed to create report in database');
+        setStatus('error');
+        return;
       }
 
-      // Download as PDF (opens print dialog)
-      downloadReportAsPDF(html, filename);
+      if (result.data) {
+        setReportId(result.data.id);
+        console.log('[ReportGenerator] Report created successfully:', result.data.id);
+      }
 
       setStatus('success');
 
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setStatus('idle');
-      }, 3000);
+      // Don't auto-reset - let user see the success message with link
     } catch (err: any) {
-      console.error('Report generation error:', err);
+      console.error('[ReportGenerator] Unexpected error:', err);
       setError(err.message || 'Failed to generate report');
       setStatus('error');
-    }
-  };
-
-  const handleDownloadHTML = () => {
-    try {
-      // Generate HTML report
-      const html = generateReportHTML({
-        analysis: analysisData,
-        patient: patientData,
-        scan: scanData,
-        generatedBy,
-        institutionName,
-        reportType,
-      });
-
-      // Generate filename
-      const filename = `MCI_Report_${patientData.patient_id}_${new Date().toISOString().split('T')[0]}.html`;
-
-      // Download as HTML
-      downloadReportAsHTML(html, filename);
-    } catch (err: any) {
-      console.error('HTML download error:', err);
-      setError(err.message || 'Failed to download HTML');
     }
   };
 
@@ -166,15 +133,11 @@ export function ReportGenerator({
           ) : (
             <>
               <FileText className="h-4 w-4 mr-2" />
-              Generate PDF Report
+              Generate Report
             </>
           )}
         </Button>
 
-        <Button variant="outline" onClick={handleDownloadHTML}>
-          <Download className="h-4 w-4 mr-2" />
-          Download HTML
-        </Button>
       </div>
 
       {/* Error Message */}
@@ -185,12 +148,25 @@ export function ReportGenerator({
       )}
 
       {/* Success Message */}
-      {status === 'success' && (
+      {status === 'success' && reportId && (
         <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm">
           <p className="font-medium">Report generated successfully!</p>
           <p className="text-xs mt-1">
-            The PDF has been saved to the reports section. You can download it from there.
+            Your report has been saved.{' '}
+            <a href={`/dashboard/reports/${reportId}`} className="underline font-medium">
+              View Report
+            </a>
+            {' '}or see all reports in the{' '}
+            <a href="/dashboard/reports" className="underline font-medium">Reports section</a>.
           </p>
+          <div className="mt-2">
+            <a
+              href={`/dashboard/reports/${reportId}`}
+              className="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+            >
+              View Report Now
+            </a>
+          </div>
         </div>
       )}
 

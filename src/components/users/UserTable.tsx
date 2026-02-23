@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { UserWithProfile } from '@/lib/api/users';
 import { formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 import { changeUserRole, removeUser } from '@/app/dashboard/users/actions';
 import {
   User,
@@ -18,6 +19,7 @@ import {
   MoreVertical,
   Trash2,
   Edit,
+  AlertTriangle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -79,6 +81,8 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithProfile | null>(null);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
@@ -103,18 +107,18 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
     try {
       setIsUpdating(true);
       setError(null);
 
-      const result = await removeUser(userId);
+      const result = await removeUser(userToDelete.id);
 
       if (result.success) {
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
         router.refresh();
       } else {
         setError(result.error || 'Failed to delete user');
@@ -265,7 +269,10 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteUser(user.id, user.profile?.full_name || user.email)}
+                              onClick={() => {
+                                setUserToDelete(user);
+                                setDeleteDialogOpen(true);
+                              }}
                               disabled={isUpdating}
                               title="Delete User"
                             >
@@ -291,6 +298,52 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
           Showing {users.length} user{users.length !== 1 ? 's' : ''}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete User"
+        variant="destructive"
+        confirmText="Delete User"
+        cancelText="Cancel"
+        onConfirm={handleDeleteUser}
+        onCancel={() => {
+          setUserToDelete(null);
+        }}
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-destructive mb-1">
+                Are you sure you want to delete {userToDelete?.profile?.full_name || userToDelete?.email}?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">This will permanently delete:</p>
+            <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                User account and authentication
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                User profile information
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                All access permissions
+              </li>
+            </ul>
+          </div>
+        </div>
+      </AlertDialog>
     </div>
   );
 }

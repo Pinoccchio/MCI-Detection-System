@@ -7,7 +7,8 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/actions';
 import { getUsers, getUserStats } from '@/lib/api/users';
 import { UserTable } from '@/components/users/UserTable';
-import { Users, Shield, Stethoscope, FlaskConical, UserPlus } from 'lucide-react';
+import { AddUserButton } from '@/components/users/AddUserButton';
+import { Users, Shield, Stethoscope, FlaskConical } from 'lucide-react';
 
 // ============================================================================
 // STAT CARD COMPONENT
@@ -66,16 +67,19 @@ export default async function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <Users className="h-6 w-6 text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <Users className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">User Management</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage user accounts and role assignments
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage user accounts and role assignments
-          </p>
-        </div>
+        <AddUserButton />
       </div>
 
       {/* Statistics Grid */}

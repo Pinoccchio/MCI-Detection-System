@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth/actions';
 import { getReports } from '@/lib/api/reports';
 import { formatDateTime } from '@/lib/utils';
-import { FileText, Eye } from 'lucide-react';
+import { FileText, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportActions } from '@/components/reports/ReportActions';
 
@@ -93,7 +93,12 @@ export default async function ReportsPage() {
                 reports.map((report: any) => (
                   <tr key={report.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-medium">{report.title}</div>
+                      <Link
+                        href={`/dashboard/reports/${report.id}`}
+                        className="font-medium hover:underline hover:text-primary"
+                      >
+                        {report.title}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
@@ -139,8 +144,8 @@ export default async function ReportsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/dashboard/results/${report.analysis_id}`}>
-                          <Button variant="ghost" size="sm" title="View Analysis">
-                            <Eye className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" title="View Original Analysis">
+                            <Brain className="h-4 w-4" />
                           </Button>
                         </Link>
                         <ReportActions

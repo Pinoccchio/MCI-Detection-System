@@ -91,6 +91,8 @@ export async function generateAndUploadPDF(
     const htmlBuffer = Buffer.from(html, 'utf-8');
     const fileName = `report_${analysisId}_${Date.now()}.html`;
 
+    console.log('[PDF Generator] Uploading report:', fileName);
+
     // 5. Upload HTML to Supabase Storage
     // Note: We store HTML instead of PDF because it maintains perfect fidelity
     // and users can print to PDF from their browser
@@ -103,11 +105,18 @@ export async function generateAndUploadPDF(
 
     if (uploadError) {
       console.error('[PDF Generator] Upload error:', uploadError);
+      console.error('[PDF Generator] Upload error details:', {
+        code: uploadError.message,
+        fileName,
+        bufferSize: htmlBuffer.byteLength,
+      });
       return {
         success: false,
         error: `Failed to upload report: ${uploadError.message}`,
       };
     }
+
+    console.log('[PDF Generator] Upload successful:', uploadData);
 
     // 6. Get public URL
     const { data: { publicUrl } } = supabase.storage

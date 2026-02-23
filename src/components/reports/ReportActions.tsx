@@ -2,13 +2,14 @@
 
 /**
  * Report Actions Component
- * Handles download and delete actions for reports
+ * Handles view, download and delete actions for reports
  */
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { AlertDialog } from '@/components/ui/alert-dialog';
-import { Download, Trash2, Loader2, Eye } from 'lucide-react';
+import { Trash2, Loader2, Eye } from 'lucide-react';
 import { deleteReport } from '@/lib/api/reports';
 import { useRouter } from 'next/navigation';
 
@@ -57,33 +58,19 @@ export function ReportActions({ reportId, pdfPath, userRole }: ReportActionsProp
     }
   };
 
-  const handleViewReport = () => {
-    if (pdfPath) {
-      // Open HTML report in new window for printing
-      window.open(pdfPath, '_blank');
-    }
-  };
-
   return (
     <>
       <div className="flex items-center gap-2">
-        {pdfPath && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              title="View & Print Report"
-              onClick={handleViewReport}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            <a href={pdfPath} download>
-              <Button variant="ghost" size="sm" title="Download HTML Report">
-                <Download className="h-4 w-4" />
-              </Button>
-            </a>
-          </>
-        )}
+        {/* View Report - Link to report detail page */}
+        <Link href={`/dashboard/reports/${reportId}`}>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="View Report"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </Link>
 
         {userRole === 'admin' && (
           <Button
