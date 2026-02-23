@@ -5,10 +5,11 @@
  * Displays users with role management for admins
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { UserWithProfile } from '@/lib/api/users';
 import { formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { changeUserRole, removeUser } from '@/app/dashboard/users/actions';
 import {
@@ -20,6 +21,9 @@ import {
   Trash2,
   Edit,
   AlertTriangle,
+  Search,
+  Filter,
+  X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -77,12 +81,42 @@ function RoleBadge({ role }: { role: string }) {
 
 export function UserTable({ users, currentUserId }: UserTableProps) {
   const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithProfile | null>(null);
+
+  // Filter users based on search and role filter
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      // Text search
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        user.profile?.full_name?.toLowerCase().includes(search) ||
+        user.email?.toLowerCase().includes(search) ||
+        user.profile?.institution?.toLowerCase().includes(search);
+
+      if (!matchesSearch) return false;
+
+      // Role filter
+      if (roleFilter !== 'all' && user.profile?.role !== roleFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [users, searchTerm, roleFilter]);
+
+  const activeFiltersCount = roleFilter !== 'all' ? 1 : 0;
+
+  const clearFilters = () => {
+    setRoleFilter('all');
+  };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
@@ -132,6 +166,68 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
 
   return (
     <div className="space-y-4">
+      {/* Search and Filters */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search users by name, email, institution..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Button
+            variant={showFilters ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Filters</h3>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-4">
+            {/* Role Filter */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Role</label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-border bg-background text-sm min-w-[150px]"
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="clinician">Clinician</option>
+                <option value="researcher">Researcher</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error Display */}
       {error && (
         <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
@@ -169,15 +265,15 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {users.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     <User className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p>No users found</p>
+                    <p>{searchTerm || roleFilter !== 'all' ? 'No users match your filters' : 'No users found'}</p>
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
+                filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -293,9 +389,9 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
       </div>
 
       {/* Results count */}
-      {users.length > 0 && (
+      {filteredUsers.length > 0 && (
         <div className="text-sm text-muted-foreground">
-          Showing {users.length} user{users.length !== 1 ? 's' : ''}
+          Showing {filteredUsers.length} of {users.length} user{users.length !== 1 ? 's' : ''}
         </div>
       )}
 

@@ -5,11 +5,11 @@
  * Displays analysis results with search and filtering
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { AnalysisResult } from '@/types/database';
 import { formatDateTime } from '@/lib/utils';
-import { Search, Eye, TrendingUp, TrendingDown, Filter } from 'lucide-react';
+import { Search, Eye, TrendingUp, TrendingDown, Filter, Download, FileSpreadsheet, FileJson } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -44,6 +44,56 @@ export function ResultsTable({ analyses }: ResultsTableProps) {
     return matchesSearch && matchesPrediction;
   });
 
+  // Export functions
+  const exportToCSV = useCallback(() => {
+    const headers = ['Patient Name', 'Patient ID', 'Scan Type', 'Prediction', 'Confidence', 'Model', 'Analyzed Date'];
+    const rows = filteredAnalyses.map((analysis) => [
+      analysis.mri_scans?.patients?.full_name || '',
+      analysis.mri_scans?.patients?.patient_id || '',
+      analysis.mri_scans?.scan_type || '',
+      analysis.prediction,
+      (analysis.confidence * 100).toFixed(2) + '%',
+      analysis.model_version,
+      new Date(analysis.created_at).toISOString(),
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `mci_analysis_results_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  }, [filteredAnalyses]);
+
+  const exportToJSON = useCallback(() => {
+    const data = filteredAnalyses.map((analysis) => ({
+      id: analysis.id,
+      patient: {
+        name: analysis.mri_scans?.patients?.full_name,
+        id: analysis.mri_scans?.patients?.patient_id,
+      },
+      scan: {
+        type: analysis.mri_scans?.scan_type,
+        date: analysis.mri_scans?.scan_date,
+      },
+      prediction: analysis.prediction,
+      confidence: analysis.confidence,
+      probabilities: analysis.probabilities,
+      volumetry: analysis.volumetry,
+      model_version: analysis.model_version,
+      analyzed_at: analysis.created_at,
+    }));
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `mci_analysis_results_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+  }, [filteredAnalyses]);
+
   return (
     <div className="space-y-4">
       {/* Search and Filter Bar */}
@@ -70,6 +120,18 @@ export function ResultsTable({ analyses }: ResultsTableProps) {
             <option value="Cognitively Normal">Cognitively Normal</option>
             <option value="Mild Cognitive Impairment">MCI Detected</option>
           </select>
+        </div>
+
+        {/* Export Buttons */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportToCSV} disabled={filteredAnalyses.length === 0}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToJSON} disabled={filteredAnalyses.length === 0}>
+            <FileJson className="h-4 w-4 mr-2" />
+            Export JSON
+          </Button>
         </div>
       </div>
 

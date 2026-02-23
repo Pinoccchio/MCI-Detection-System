@@ -6,6 +6,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/actions';
 import { ProfileForm } from './ProfileForm';
+import { PasswordChangeForm } from './PasswordChangeForm';
 import { UserCircle, Mail, Shield, Calendar } from 'lucide-react';
 
 // ============================================================================
@@ -111,15 +112,21 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      {/* Personal Information Form */}
-      <ProfileForm
-        initialData={{
-          full_name: profile.full_name,
-          institution: profile.institution || '',
-          contact_number: profile.contact_number || '',
-          bio: profile.bio || '',
-        }}
-      />
+      {/* Two Column Layout for Forms */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Personal Information Form */}
+        <ProfileForm
+          initialData={{
+            full_name: profile.full_name,
+            institution: profile.institution || '',
+            contact_number: profile.contact_number || '',
+            bio: profile.bio || '',
+          }}
+        />
+
+        {/* Password Change Form */}
+        <PasswordChangeForm />
+      </div>
 
       {/* Account Information (Read-only) */}
       <div className="bg-card border border-border rounded-lg p-6">

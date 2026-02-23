@@ -13,12 +13,16 @@ import {
   getFeatureImportance,
   getVolumetryStats,
   getModelInfo,
+  getROCCurveData,
+  getAnalysisTrends,
 } from '@/lib/api/analytics';
 import { ModelMetricsComponent } from '@/components/analytics/ModelMetrics';
 import { ConfusionMatrixComponent } from '@/components/analytics/ConfusionMatrix';
 import { ClassDistributionComponent } from '@/components/analytics/ClassDistribution';
 import { ConfidenceDistributionComponent } from '@/components/analytics/ConfidenceDistribution';
 import { FeatureImportanceComponent } from '@/components/analytics/FeatureImportance';
+import { ROCCurveComponent } from '@/components/analytics/ROCCurve';
+import { AnalysisTrendsComponent } from '@/components/analytics/AnalysisTrends';
 import { BarChart3, Brain, TrendingUp } from 'lucide-react';
 
 export default async function AnalyticsPage() {
@@ -43,6 +47,8 @@ export default async function AnalyticsPage() {
     featureImportance,
     volumetryStats,
     modelInfo,
+    rocData,
+    trendData,
   ] = await Promise.all([
     getModelMetrics(),
     getConfusionMatrix(),
@@ -51,6 +57,8 @@ export default async function AnalyticsPage() {
     getFeatureImportance(),
     getVolumetryStats(),
     getModelInfo(),
+    getROCCurveData(),
+    getAnalysisTrends(30),
   ]);
 
   return (
@@ -113,6 +121,12 @@ export default async function AnalyticsPage() {
         <ModelMetricsComponent metrics={metrics} />
       </div>
 
+      {/* Analysis Trends */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Analysis Trends (Last 30 Days)</h2>
+        <AnalysisTrendsComponent data={trendData} period="daily" />
+      </div>
+
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Confusion Matrix */}
@@ -126,10 +140,16 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Confidence Distribution */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Confidence Analysis</h2>
-        <ConfidenceDistributionComponent distribution={confidenceDistribution} />
+      {/* ROC Curve */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Model Discrimination</h2>
+          <ROCCurveComponent data={rocData} />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Confidence Analysis</h2>
+          <ConfidenceDistributionComponent distribution={confidenceDistribution} />
+        </div>
       </div>
 
       {/* Feature Importance */}

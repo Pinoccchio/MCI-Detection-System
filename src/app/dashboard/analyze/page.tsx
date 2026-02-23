@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/actions';
 import { getScans } from '@/lib/api/scans';
 import { AnalyzeInterface } from '@/components/analyze/AnalyzeInterface';
+import { BatchAnalysis } from '@/components/analyze/BatchAnalysis';
 import { Brain } from 'lucide-react';
 
 interface AnalyzePageProps {
@@ -54,12 +55,18 @@ export default async function AnalyzePage({ searchParams }: AnalyzePageProps) {
         </div>
       </div>
 
-      {/* Analysis Interface */}
-      <AnalyzeInterface
-        scans={scans}
-        preSelectedScan={preSelectedScan}
-        userId={user.id}
-      />
+      {/* Analysis Interfaces */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Single Analysis */}
+        <AnalyzeInterface
+          scans={scans}
+          preSelectedScan={preSelectedScan}
+          userId={user.id}
+        />
+
+        {/* Batch Analysis */}
+        <BatchAnalysis scans={scans} userId={user.id} />
+      </div>
     </div>
   );
 }

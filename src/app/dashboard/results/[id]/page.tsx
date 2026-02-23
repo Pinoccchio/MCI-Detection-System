@@ -213,7 +213,7 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
 
           {/* Grad-CAM Visualization */}
           <GradCAMViewer
-            gradcamImage={analysis.gradcam_image}
+            gradcamImage={analysis.gradcam_image ?? null}
             prediction={analysis.prediction}
             confidence={analysis.confidence}
           />

@@ -5,11 +5,11 @@
  * Displays list of patients with search and actions
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Patient } from '@/types/database';
 import { formatDate } from '@/lib/utils';
-import { Search, Eye, Edit, Trash2, UserPlus, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, UserPlus, AlertTriangle, Filter, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -29,19 +29,60 @@ interface PatientTableProps {
 
 export function PatientTable({ patients, onDelete }: PatientTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [genderFilter, setGenderFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
 
-  // Filter patients based on search
-  const filteredPatients = patients.filter((patient) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      patient.full_name.toLowerCase().includes(search) ||
-      patient.patient_id.toLowerCase().includes(search) ||
-      patient.contact_email?.toLowerCase().includes(search) ||
-      patient.contact_phone?.includes(search)
-    );
-  });
+  // Filter patients based on search and advanced filters
+  const filteredPatients = useMemo(() => {
+    return patients.filter((patient) => {
+      // Text search
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        patient.full_name.toLowerCase().includes(search) ||
+        patient.patient_id.toLowerCase().includes(search) ||
+        patient.contact_email?.toLowerCase().includes(search) ||
+        patient.contact_phone?.includes(search);
+
+      if (!matchesSearch) return false;
+
+      // Gender filter
+      if (genderFilter !== 'all' && patient.gender !== genderFilter) {
+        return false;
+      }
+
+      // Date range filter
+      if (dateFrom || dateTo) {
+        const patientDate = new Date(patient.created_at);
+        if (dateFrom) {
+          const fromDate = new Date(dateFrom);
+          if (patientDate < fromDate) return false;
+        }
+        if (dateTo) {
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          if (patientDate > toDate) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [patients, searchTerm, genderFilter, dateFrom, dateTo]);
+
+  const activeFiltersCount = [
+    genderFilter !== 'all',
+    dateFrom !== '',
+    dateTo !== '',
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setGenderFilter('all');
+    setDateFrom('');
+    setDateTo('');
+  };
 
   const calculateAge = (dob: string) => {
     const birthDate = new Date(dob);
@@ -57,16 +98,33 @@ export function PatientTable({ patients, onDelete }: PatientTableProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search patients by name, ID, email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search patients by name, ID, email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Button
+            variant={showFilters ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
         </div>
 
         <Link href="/dashboard/patients/new">
@@ -76,6 +134,59 @@ export function PatientTable({ patients, onDelete }: PatientTableProps) {
           </Button>
         </Link>
       </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Filters</h3>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear all
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Gender Filter */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Gender</label>
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              >
+                <option value="all">All Genders</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </div>
+
+            {/* Date From Filter */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Registered From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              />
+            </div>
+
+            {/* Date To Filter */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Registered To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden">

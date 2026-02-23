@@ -5,10 +5,10 @@
  * Displays list of MRI scans with search and actions
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { formatDateTime, formatFileSize } from '@/lib/utils';
-import { Search, Eye, Trash2, Upload, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Trash2, Upload, AlertTriangle, Filter, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -44,20 +44,55 @@ interface ScansTableProps {
 
 export function ScansTable({ scans, onDelete }: ScansTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [scanTypeFilter, setScanTypeFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scanToDelete, setScanToDelete] = useState<Scan | null>(null);
 
-  // Filter scans based on search
-  const filteredScans = scans.filter((scan) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      scan.patients?.full_name.toLowerCase().includes(search) ||
-      scan.patients?.patient_id.toLowerCase().includes(search) ||
-      scan.scan_type.toLowerCase().includes(search) ||
-      scan.file_type?.toLowerCase().includes(search) ||
-      scan.status.toLowerCase().includes(search)
-    );
-  });
+  // Get unique scan types for filter dropdown
+  const scanTypes = useMemo(() => {
+    const types = new Set(scans.map((s) => s.scan_type));
+    return Array.from(types).sort();
+  }, [scans]);
+
+  // Filter scans based on search and filters
+  const filteredScans = useMemo(() => {
+    return scans.filter((scan) => {
+      // Text search
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        scan.patients?.full_name.toLowerCase().includes(search) ||
+        scan.patients?.patient_id.toLowerCase().includes(search) ||
+        scan.scan_type.toLowerCase().includes(search) ||
+        scan.file_type?.toLowerCase().includes(search) ||
+        scan.status.toLowerCase().includes(search);
+
+      if (!matchesSearch) return false;
+
+      // Status filter
+      if (statusFilter !== 'all' && scan.status !== statusFilter) {
+        return false;
+      }
+
+      // Scan type filter
+      if (scanTypeFilter !== 'all' && scan.scan_type !== scanTypeFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [scans, searchTerm, statusFilter, scanTypeFilter]);
+
+  const activeFiltersCount = [
+    statusFilter !== 'all',
+    scanTypeFilter !== 'all',
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setScanTypeFilter('all');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,16 +110,33 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search scans by patient, type, status..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search scans by patient, type, status..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Button
+            variant={showFilters ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
         </div>
 
         <Link href="/dashboard/upload">
@@ -94,6 +146,55 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
           </Button>
         </Link>
       </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Filters</h3>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear all
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+
+            {/* Scan Type Filter */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Scan Type</label>
+              <select
+                value={scanTypeFilter}
+                onChange={(e) => setScanTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              >
+                <option value="all">All Types</option>
+                {scanTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden">
