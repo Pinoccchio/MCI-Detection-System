@@ -81,7 +81,7 @@ export function PatientForm({ patient, mode }: PatientFormProps) {
         patient_id: data.patient_id,
         full_name: data.full_name,
         date_of_birth: data.date_of_birth,
-        gender: data.gender,
+        gender: data.gender || 'Other',
         contact_email: data.contact_email || undefined,
         contact_phone: data.contact_phone || undefined,
         notes: data.notes || undefined,

@@ -8,8 +8,13 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth/actions';
 import { getReports } from '@/lib/api/reports';
 import { formatDateTime } from '@/lib/utils';
-import { FileText, Eye, Download, Trash2 } from 'lucide-react';
+import { FileText, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReportActions } from '@/components/reports/ReportActions';
+
+// Force dynamic rendering to avoid caching issues
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ReportsPage() {
   // Check authentication
@@ -138,16 +143,11 @@ export default async function ReportsPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </Link>
-                        {user.profile.role === 'admin' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            title="Delete Report"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <ReportActions
+                          reportId={report.id}
+                          pdfPath={report.pdf_path}
+                          userRole={user.profile?.role || 'researcher'}
+                        />
                       </div>
                     </td>
                   </tr>

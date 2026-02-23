@@ -1,10 +1,19 @@
 /**
  * PDF Report Generator
- * Generates clinical reports for MCI analysis results
+ * Generates clinical and research reports for MCI analysis results
  */
 
 import { AnalysisResultWithDetails } from '@/lib/api/analyses';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import {
+  anonymizePatientName,
+  calculateAge,
+  anonymizePatientId,
+  anonymizeScanDate,
+  getYearOnly,
+  anonymizeInstitution,
+  standardizeGender,
+} from './anonymizer';
 
 // ============================================================================
 // TYPES
@@ -16,6 +25,7 @@ export interface ReportData {
   scan: any;
   generatedBy: string;
   institutionName?: string;
+  reportType?: 'clinical' | 'research';
 }
 
 // ============================================================================
@@ -26,7 +36,8 @@ export interface ReportData {
  * Generate HTML template for PDF report
  */
 export function generateReportHTML(data: ReportData): string {
-  const { analysis, patient, scan, generatedBy, institutionName } = data;
+  const { analysis, patient, scan, generatedBy, institutionName, reportType = 'clinical' } = data;
+  const isResearch = reportType === 'research';
 
   const reportDate = new Date().toISOString();
   const isMCI = analysis.prediction === 'Mild Cognitive Impairment';
@@ -37,7 +48,7 @@ export function generateReportHTML(data: ReportData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCI Analysis Report - ${patient.full_name}</title>
+  <title>MCI ${isResearch ? 'Research' : 'Clinical'} Report - ${isResearch ? anonymizePatientName(patient.patient_id) : patient.full_name}</title>
   <style>
     * {
       margin: 0;
@@ -306,32 +317,30 @@ export function generateReportHTML(data: ReportData): string {
 <body>
   <!-- Header -->
   <div class="header">
-    <h1>MCI Analysis Report</h1>
+    <h1>MCI ${isResearch ? 'Research' : 'Clinical'} Report</h1>
     <div class="subtitle">Mild Cognitive Impairment Detection System</div>
-    ${institutionName ? `<div class="institution">${institutionName}</div>` : ''}
+    ${institutionName ? `<div class="institution">${isResearch ? anonymizeInstitution(institutionName) : institutionName}</div>` : ''}
   </div>
 
   <!-- Patient Information -->
   <div class="section">
-    <h2 class="section-title">Patient Information</h2>
+    <h2 class="section-title">${isResearch ? 'Subject Information' : 'Patient Information'}</h2>
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">Patient Name</div>
-        <div class="info-value">${patient.full_name}</div>
+        <div class="info-label">${isResearch ? 'Subject ID' : 'Patient Name'}</div>
+        <div class="info-value">${isResearch ? anonymizePatientName(patient.patient_id) : patient.full_name}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">Patient ID</div>
-        <div class="info-value">${patient.patient_id}</div>
+        <div class="info-label">${isResearch ? 'Study ID' : 'Patient ID'}</div>
+        <div class="info-value">${isResearch ? anonymizePatientId(patient.patient_id) : patient.patient_id}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">Date of Birth</div>
-        <div class="info-value">${formatDate(patient.date_of_birth)}</div>
+        <div class="info-label">${isResearch ? 'Age' : 'Date of Birth'}</div>
+        <div class="info-value">${isResearch ? `${calculateAge(patient.date_of_birth)} years` : formatDate(patient.date_of_birth)}</div>
       </div>
       <div class="info-item">
         <div class="info-label">Gender</div>
-        <div class="info-value">${
-          patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other'
-        }</div>
+        <div class="info-value">${standardizeGender(patient.gender)}</div>
       </div>
     </div>
   </div>
@@ -345,12 +354,12 @@ export function generateReportHTML(data: ReportData): string {
         <div class="info-value">${scan.scan_type}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">Scan Date</div>
-        <div class="info-value">${formatDateTime(scan.scan_date)}</div>
+        <div class="info-label">${isResearch ? 'Scan Timing' : 'Scan Date'}</div>
+        <div class="info-value">${isResearch ? anonymizeScanDate(scan.scan_date, analysis.created_at) : formatDateTime(scan.scan_date)}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">Analysis Date</div>
-        <div class="info-value">${formatDateTime(analysis.created_at)}</div>
+        <div class="info-label">${isResearch ? 'Analysis Year' : 'Analysis Date'}</div>
+        <div class="info-value">${isResearch ? getYearOnly(analysis.created_at) : formatDateTime(analysis.created_at)}</div>
       </div>
       <div class="info-item">
         <div class="info-label">Model Version</div>
@@ -437,17 +446,23 @@ export function generateReportHTML(data: ReportData): string {
 
   <!-- Disclaimer -->
   <div class="disclaimer">
-    <div class="disclaimer-title">Medical Disclaimer</div>
+    <div class="disclaimer-title">${isResearch ? 'Research Disclaimer' : 'Medical Disclaimer'}</div>
     <p>
-      This AI-powered analysis is intended for research and clinical decision support purposes only.
-      It should not be used as the sole basis for clinical diagnosis or treatment decisions.
-      The results must be interpreted by qualified healthcare professionals in conjunction with
-      other clinical findings, patient history, and diagnostic tests. Always consult with qualified
-      medical professionals for definitive diagnosis and treatment planning.
+      ${isResearch
+        ? `This report is generated for research purposes only. All patient identifying information has been anonymized
+           to protect privacy. This analysis is part of a research study and should not be used for clinical diagnosis
+           or treatment decisions. The data presented is intended solely for statistical analysis and research publication.`
+        : `This AI-powered analysis is intended for research and clinical decision support purposes only.
+           It should not be used as the sole basis for clinical diagnosis or treatment decisions.
+           The results must be interpreted by qualified healthcare professionals in conjunction with
+           other clinical findings, patient history, and diagnostic tests. Always consult with qualified
+           medical professionals for definitive diagnosis and treatment planning.`
+      }
     </p>
   </div>
 
   <!-- Signature Section -->
+  ${!isResearch ? `
   <div class="signature-section">
     <div class="signature-box">
       <div class="signature-label">Analyzed By</div>
@@ -458,6 +473,7 @@ export function generateReportHTML(data: ReportData): string {
       <div style="margin-top: 30px;"></div>
     </div>
   </div>
+  ` : ''}
 
   <!-- Footer -->
   <div class="footer">

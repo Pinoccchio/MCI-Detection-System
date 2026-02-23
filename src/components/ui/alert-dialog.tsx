@@ -7,7 +7,7 @@
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -37,6 +37,7 @@ export function AlertDialog({
   variant = 'default',
 }: AlertDialogProps) {
   const [mounted, setMounted] = React.useState(false);
+  const [isConfirming, setIsConfirming] = React.useState(false);
 
   // Track mount state for portal
   React.useEffect(() => {
@@ -68,9 +69,22 @@ export function AlertDialog({
     }
   }, [open]);
 
-  const handleConfirm = () => {
-    onConfirm?.();
-    onOpenChange(false);
+  const handleConfirm = async () => {
+    if (onConfirm) {
+      setIsConfirming(true);
+      try {
+        // Wrap in Promise.resolve to handle both sync and async callbacks
+        await Promise.resolve(onConfirm());
+        onOpenChange(false);
+      } catch (error) {
+        // Keep dialog open on error so user sees error message
+        console.error('Error in confirm action:', error);
+      } finally {
+        setIsConfirming(false);
+      }
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const handleCancel = () => {
@@ -86,7 +100,7 @@ export function AlertDialog({
       <div
         className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-md"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-        onClick={handleCancel}
+        onClick={isConfirming ? undefined : handleCancel}
       />
 
       {/* Dialog */}
@@ -97,7 +111,8 @@ export function AlertDialog({
             <h2 className="text-lg font-semibold">{title}</h2>
             <button
               onClick={handleCancel}
-              className="rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+              disabled={isConfirming}
+              className="rounded-sm opacity-70 hover:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
@@ -114,13 +129,19 @@ export function AlertDialog({
 
           {/* Footer */}
           <div className="flex items-center justify-end gap-3 p-6 bg-card border-t border-border">
-            <Button variant="outline" onClick={handleCancel}>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isConfirming}
+            >
               {cancelText}
             </Button>
             <Button
               variant={variant === 'destructive' ? 'destructive' : 'default'}
               onClick={handleConfirm}
+              disabled={isConfirming}
             >
+              {isConfirming && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {confirmText}
             </Button>
           </div>

@@ -257,22 +257,8 @@ export async function updatePatient(
       };
     }
 
-    // If updating patient_id, check for duplicates
-    if (updates.patient_id) {
-      const { data: existing } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('patient_id', updates.patient_id)
-        .neq('id', id)
-        .single();
-
-      if (existing) {
-        return {
-          success: false,
-          error: `Patient ID ${updates.patient_id} already exists`,
-        };
-      }
-    }
+    // Note: patient_id is not updatable for data integrity
+    // If you need to change a patient ID, create a new patient record
 
     // Update patient
     const { data, error } = await supabase

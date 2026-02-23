@@ -14,6 +14,7 @@ export interface PredictionResponse {
     right_hippocampus: number;
     total_volume: number;
   };
+  features?: Record<string, number>; // All 26 extracted features
   gradcam_image?: string; // Base64 encoded
   model_version: string;
 }

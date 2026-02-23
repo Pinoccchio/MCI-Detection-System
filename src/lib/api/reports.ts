@@ -231,7 +231,7 @@ export async function getReportById(id: string): Promise<ReportResult> {
 // ============================================================================
 
 /**
- * Create a new report record
+ * Create a new report record with server-side PDF generation
  */
 export async function createReport(
   input: CreateReportInput
@@ -265,11 +265,36 @@ export async function createReport(
       };
     }
 
+    // Generate PDF using server-side generator (if not provided)
+    let pdfPath = input.pdf_path;
+    let fileSize = input.file_size;
+
+    if (!pdfPath) {
+      // Import server generator dynamically to avoid client-side imports
+      const { generateAndUploadPDF } = await import('@/lib/pdf/server-generator');
+
+      const pdfResult = await generateAndUploadPDF(input.analysis_id, input.report_type);
+
+      if (!pdfResult.success) {
+        return {
+          success: false,
+          error: `PDF generation failed: ${pdfResult.error}`,
+        };
+      }
+
+      pdfPath = pdfResult.filePath;
+      fileSize = pdfResult.fileSize;
+    }
+
     // Create report record
     const { data, error } = await supabase
       .from('reports')
       .insert({
-        ...input,
+        analysis_id: input.analysis_id,
+        report_type: input.report_type,
+        title: input.title,
+        pdf_path: pdfPath,
+        file_size: fileSize,
         generated_by: user.id,
       })
       .select()
@@ -340,13 +365,15 @@ export async function deleteReport(id: string): Promise<OperationResult> {
 
     if (error) {
       console.error('[Reports API] Delete error:', error.message);
+      // Still revalidate to ensure UI is in sync
+      revalidatePath('/dashboard/reports');
       return {
         success: false,
         error: error.message,
       };
     }
 
-    // Revalidate pages
+    // Revalidate pages after successful delete
     revalidatePath('/dashboard/reports');
 
     return {
@@ -354,6 +381,8 @@ export async function deleteReport(id: string): Promise<OperationResult> {
     };
   } catch (error: any) {
     console.error('[Reports API] Unexpected delete error:', error);
+    // Always revalidate on errors to keep UI in sync
+    revalidatePath('/dashboard/reports');
     return {
       success: false,
       error: error.message || 'Failed to delete report',

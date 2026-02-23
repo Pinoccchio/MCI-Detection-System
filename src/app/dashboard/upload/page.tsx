@@ -9,6 +9,7 @@ import { getPatients } from '@/lib/api/patients';
 import { ScanUploader } from '@/components/scans/ScanUploader';
 import { PatientSelector } from '@/components/scans/PatientSelector';
 import { Upload as UploadIcon } from 'lucide-react';
+import { Patient } from '@/types/database';
 
 interface UploadPageProps {
   searchParams: Promise<{
@@ -36,8 +37,8 @@ export default async function UploadPage({ searchParams }: UploadPageProps) {
   // Otherwise show patient selection
   const preSelectedPatientId = params.patient;
 
-  let selectedPatient = null;
-  let allPatients = [];
+  let selectedPatient: Patient | null | undefined = null;
+  let allPatients: Patient[] = [];
 
   if (preSelectedPatientId) {
     const { patients } = await getPatients();
