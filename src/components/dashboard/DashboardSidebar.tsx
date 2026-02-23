@@ -17,7 +17,7 @@ import {
   Scan,
   Brain,
   FileText,
-  Settings,
+  UserCircle,
   BarChart3,
   Upload,
   Database,
@@ -127,9 +127,9 @@ const navItems: NavItem[] = [
     roles: ['admin'],
   },
   {
-    href: '/dashboard/settings',
-    icon: Settings,
-    label: 'Settings',
+    href: '/dashboard/profile',
+    icon: UserCircle,
+    label: 'Profile',
     roles: ['admin', 'clinician', 'researcher'],
   },
 ];

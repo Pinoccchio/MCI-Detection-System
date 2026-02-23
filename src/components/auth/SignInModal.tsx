@@ -73,6 +73,7 @@ export function SignInModal({
   };
 
   const handleSwitchToSignUp = () => {
+    setError(null); // Clear error when switching modals
     reset();
     onOpenChange(false);
     setTimeout(() => onSwitchToSignUp(), 200);

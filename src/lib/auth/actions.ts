@@ -37,6 +37,7 @@ export interface UserWithProfile {
     contact_number: string | null;
     bio: string | null;
     avatar_url: string | null;
+    created_at: string;
   } | null;
 }
 
@@ -226,7 +227,7 @@ export async function getCurrentUser(): Promise<UserWithProfile | null> {
     // Fetch user profile
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('full_name, role, institution, department, contact_number, bio, avatar_url')
+      .select('full_name, role, institution, department, contact_number, bio, avatar_url, created_at')
       .eq('id', user.id)
       .single();
 

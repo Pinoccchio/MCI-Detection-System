@@ -5,7 +5,8 @@
  * Displays user information, notifications, and quick actions
  */
 
-import { Bell, LogOut, User, Settings, ChevronDown } from 'lucide-react';
+import { Bell, LogOut, User, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { signOut } from '@/lib/auth/actions';
 import { useState } from 'react';
@@ -34,6 +35,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const router = useRouter();
 
   const handleSignOut = async () => {
     try {
@@ -101,11 +103,6 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
           <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
         </Button>
 
-        {/* Settings */}
-        <Button variant="ghost" size="icon">
-          <Settings className="h-5 w-5" />
-        </Button>
-
         {/* Divider */}
         <div className="h-8 w-px bg-border mx-2" />
 
@@ -165,23 +162,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      // Navigate to profile
+                      router.push('/dashboard/profile');
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
                   >
                     <User className="h-4 w-4" />
                     <span>Your Profile</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      // Navigate to settings
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
                   </button>
                 </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UserPlus, CheckCircle, Eye, EyeOff } from "lucide-react";
@@ -38,6 +38,7 @@ export function SignUpModal({
   const [requiresConfirmation, setRequiresConfirmation] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     register,
@@ -57,6 +58,23 @@ export function SignUpModal({
       acceptTerms: false,
     },
   });
+
+  // Reset state when modal closes and cleanup timeout on unmount
+  useEffect(() => {
+    if (!open) {
+      setError(null);
+      setSuccess(false);
+      setRequiresConfirmation(false);
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+      reset();
+    }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [open, reset]);
 
   const onSubmit = async (data: SignUpFormData) => {
     try {
@@ -89,7 +107,7 @@ export function SignUpModal({
       }
 
       // Otherwise redirect to sign in after short delay
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         reset();
         onOpenChange(false);
         onSwitchToSignIn();

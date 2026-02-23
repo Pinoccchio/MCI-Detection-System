@@ -47,6 +47,7 @@ export function ReportGenerator({
     try {
       setStatus('generating');
       setError(null);
+      setReportId(null); // Clear previous report ID
 
       // Save report record to database first
       const reportData = {

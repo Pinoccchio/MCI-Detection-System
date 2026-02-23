@@ -15,7 +15,7 @@ export interface SaveAnalysisData {
  * Save an analysis result to the database
  */
 export async function saveAnalysisResult(data: SaveAnalysisData): Promise<AnalysisResultDB> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: result, error } = await supabase
     .from('analysis_results')
@@ -43,7 +43,7 @@ export async function saveAnalysisResult(data: SaveAnalysisData): Promise<Analys
  * Get analysis history for a specific scan
  */
 export async function getAnalysisHistory(scanId: string): Promise<AnalysisResultDB[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('analysis_results')
@@ -71,7 +71,7 @@ export async function getLatestAnalysis(scanId: string): Promise<AnalysisResultD
  * Get all analyses by a specific user
  */
 export async function getUserAnalyses(userId: string): Promise<AnalysisResultDB[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('analysis_results')
@@ -91,7 +91,7 @@ export async function getUserAnalyses(userId: string): Promise<AnalysisResultDB[
  * Delete an analysis result
  */
 export async function deleteAnalysis(analysisId: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from('analysis_results')

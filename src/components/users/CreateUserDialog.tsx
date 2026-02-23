@@ -5,7 +5,7 @@
  * Modal form for admins to create new user accounts
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,6 +60,15 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setFormData(initialFormData);
+      setError(null);
+      setShowPassword(false);
+    }
+  }, [open]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

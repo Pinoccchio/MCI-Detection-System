@@ -5,7 +5,7 @@
  * Handles MRI scan file uploads with drag-and-drop support
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, X, File, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,16 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Form fields
   const [scanType, setScanType] = useState('T1-weighted');
@@ -179,7 +189,7 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
       setUploadStatus('success');
 
       // Redirect after success
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         if (onComplete) {
           onComplete();
         } else {

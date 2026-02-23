@@ -122,3 +122,12 @@ export interface UserProfile {
   created_at: string;
   updated_at?: string;
 }
+
+export interface CreateUserProfileInput {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  institution?: string | null;
+  department?: string | null;
+  contact_number?: string | null;
+}

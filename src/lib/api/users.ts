@@ -49,6 +49,13 @@ export interface CreateUserInput {
   contact_number: string;
 }
 
+export interface UpdateProfileInput {
+  full_name: string;
+  institution: string;
+  contact_number: string;
+  bio?: string;
+}
+
 export interface OperationResult {
   success: boolean;
   error?: string;
@@ -293,9 +300,9 @@ export async function getUserById(userId: string): Promise<{ user: UserWithProfi
     // Get auth user using service role client
     const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
 
-    if (authError) {
+    if (authError || !authUser) {
       console.error('Error fetching auth user:', authError);
-      return { user: null, error: authError.message };
+      return { user: null, error: authError?.message || 'User not found' };
     }
 
     const user: UserWithProfile = {
@@ -363,6 +370,50 @@ export async function createUser(input: CreateUserInput): Promise<OperationResul
     return { success: true, userId: authData.user.id };
   } catch (error: any) {
     console.error('Error in createUser:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// UPDATE OWN PROFILE
+// ============================================================================
+
+/**
+ * Update the current user's own profile
+ * Uses RLS policy: users can only update their own profile
+ */
+export async function updateProfile(input: UpdateProfileInput): Promise<OperationResult> {
+  try {
+    const supabase = await createClient();
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Update user profile (RLS ensures only own profile can be updated)
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({
+        full_name: input.full_name,
+        institution: input.institution,
+        contact_number: input.contact_number,
+        bio: input.bio || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath('/dashboard/profile');
+    revalidatePath('/dashboard'); // Refresh header too
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error in updateProfile:', error);
     return { success: false, error: error.message };
   }
 }
