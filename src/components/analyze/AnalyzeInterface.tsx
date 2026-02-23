@@ -121,6 +121,7 @@ export function AnalyzeInterface({ scans, preSelectedScan, userId }: AnalyzeInte
             }
           : undefined,
         features: predictionResult.features || undefined,
+        gradcam_image: predictionResult.gradcam_image || undefined,
       });
 
       if (!saveResult.success) {

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportGenerator } from '@/components/reports/ReportGenerator';
+import { GradCAMViewer } from '@/components/results/GradCAMViewer';
 
 export default async function ResultDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // Await params
@@ -209,6 +210,13 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
               </div>
             </div>
           )}
+
+          {/* Grad-CAM Visualization */}
+          <GradCAMViewer
+            gradcamImage={analysis.gradcam_image}
+            prediction={analysis.prediction}
+            confidence={analysis.confidence}
+          />
 
           {/* Features Display */}
           {analysis.features && (

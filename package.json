@@ -23,6 +23,8 @@
     "jspdf": "^4.2.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.4",
+    "nifti-reader-js": "^0.8.0",
+    "pako": "^2.1.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pako": "^2.0.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

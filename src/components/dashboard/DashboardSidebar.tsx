@@ -26,6 +26,7 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  PenTool,
 } from 'lucide-react';
 
 // ============================================================================
@@ -77,6 +78,12 @@ const navItems: NavItem[] = [
     icon: Brain,
     label: 'Analyze',
     roles: ['admin', 'researcher'],
+  },
+  {
+    href: '/dashboard/trace',
+    icon: PenTool,
+    label: 'Manual Tracing',
+    roles: ['admin'],
   },
 
   // Clinician Navigation
