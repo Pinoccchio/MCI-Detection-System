@@ -1,12 +1,13 @@
 /**
  * Tracings API Route
  * Handles saving and retrieving hippocampal tracing data
+ * Uses the mask_corrections table for proper data management
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// POST - Save a new tracing
+// POST - Save a new tracing correction
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -45,10 +46,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify scan exists
+    if (slice_index === undefined || slice_index === null) {
+      return NextResponse.json(
+        { error: 'slice_index is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!orientation) {
+      return NextResponse.json(
+        { error: 'orientation is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify scan exists and get patient info for response
     const { data: scan } = await supabase
       .from('mri_scans')
-      .select('id')
+      .select('id, scan_type, patients(full_name)')
       .eq('id', scan_id)
       .single();
 
@@ -56,80 +71,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
     }
 
-    // If mask_data is provided as base64, upload to storage
-    let mask_path = null;
-    if (mask_data) {
-      const fileName = `tracings/${scan_id}/${Date.now()}_slice${slice_index || 0}.png`;
+    // Store mask_data as base64 in the actions JSONB field
+    // This avoids storage bucket MIME type restrictions for small correction masks
+    const actionsData = {
+      mask_base64: mask_data || null,
+      tool: metadata?.tool || null,
+      brushSize: metadata?.brushSize || null,
+      timestamp: Date.now(),
+    };
 
-      // Convert base64 to blob
-      const base64Data = mask_data.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
+    // Determine side from metadata or default to 'both'
+    const side = metadata?.side || 'both';
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('mri-scans')
-        .upload(fileName, buffer, {
-          contentType: 'image/png',
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        return NextResponse.json(
-          { error: 'Failed to upload mask data' },
-          { status: 500 }
-        );
-      }
-
-      mask_path = uploadData.path;
-    }
-
-    // For now, store tracing metadata in the mri_scans table's metadata field
-    // In a full implementation, you would create a separate tracings table
-    const { data: existingScan } = await supabase
-      .from('mri_scans')
-      .select('metadata')
-      .eq('id', scan_id)
+    // Insert into mask_corrections table
+    const { data: correction, error: insertError } = await supabase
+      .from('mask_corrections')
+      .insert({
+        scan_id,
+        slice_index,
+        orientation,
+        side,
+        mask_path: null, // Not using storage for now
+        actions: actionsData,
+        corrected_by: user.id,
+      })
+      .select()
       .single();
 
-    const existingMetadata = existingScan?.metadata || {};
-    const tracings = existingMetadata.tracings || [];
-
-    tracings.push({
-      id: crypto.randomUUID(),
-      traced_by: user.id,
-      mask_path,
-      slice_index,
-      orientation,
-      metadata,
-      created_at: new Date().toISOString(),
-    });
-
-    const { error: updateError } = await supabase
-      .from('mri_scans')
-      .update({
-        metadata: {
-          ...existingMetadata,
-          tracings,
-        },
-      })
-      .eq('id', scan_id);
-
-    if (updateError) {
-      console.error('Update error:', updateError);
+    if (insertError) {
+      console.error('Insert error:', insertError);
       return NextResponse.json(
-        { error: 'Failed to save tracing' },
+        { error: 'Failed to save correction' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Tracing saved successfully',
+      message: 'Correction saved successfully',
       data: {
+        id: correction.id,
         scan_id,
-        mask_path,
         slice_index,
         orientation,
+        side,
+        patient_name: (scan as any).patients?.full_name || 'Unknown',
+        scan_type: scan.scan_type,
+        created_at: correction.created_at,
       },
     });
   } catch (error: any) {
@@ -141,7 +129,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Retrieve tracings for a scan
+// GET - Retrieve corrections for a scan
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -155,9 +143,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get scan_id from query params
+    // Get query params
     const { searchParams } = new URL(request.url);
     const scan_id = searchParams.get('scan_id');
+    const slice_index = searchParams.get('slice_index');
+    const orientation = searchParams.get('orientation');
 
     if (!scan_id) {
       return NextResponse.json(
@@ -166,24 +156,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get scan with tracing metadata
-    const { data: scan, error } = await supabase
-      .from('mri_scans')
-      .select('id, metadata')
-      .eq('id', scan_id)
-      .single();
+    // Build query for mask_corrections table
+    let query = supabase
+      .from('mask_corrections')
+      .select('*')
+      .eq('scan_id', scan_id)
+      .order('created_at', { ascending: false });
 
-    if (error || !scan) {
-      return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
+    // Optional filters
+    if (slice_index !== null && slice_index !== undefined) {
+      query = query.eq('slice_index', parseInt(slice_index, 10));
+    }
+    if (orientation) {
+      query = query.eq('orientation', orientation);
     }
 
-    const tracings = scan.metadata?.tracings || [];
+    const { data: corrections, error } = await query;
+
+    if (error) {
+      console.error('Query error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch corrections' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         scan_id,
-        tracings,
+        corrections: corrections || [],
       },
     });
   } catch (error: any) {
@@ -195,7 +197,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// DELETE - Remove a tracing
+// DELETE - Remove a correction
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -218,60 +220,62 @@ export async function DELETE(request: NextRequest) {
 
     if (profile?.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Only administrators can delete tracings' },
+        { error: 'Only administrators can delete corrections' },
         { status: 403 }
       );
     }
 
-    // Get params from request
+    // Get correction_id from request
     const { searchParams } = new URL(request.url);
-    const scan_id = searchParams.get('scan_id');
-    const tracing_id = searchParams.get('tracing_id');
+    const correction_id = searchParams.get('correction_id');
 
-    if (!scan_id || !tracing_id) {
+    if (!correction_id) {
       return NextResponse.json(
-        { error: 'scan_id and tracing_id are required' },
+        { error: 'correction_id is required' },
         { status: 400 }
       );
     }
 
-    // Get scan
-    const { data: scan, error: fetchError } = await supabase
-      .from('mri_scans')
-      .select('metadata')
-      .eq('id', scan_id)
+    // Get correction to find mask_path for cleanup
+    const { data: correction, error: fetchError } = await supabase
+      .from('mask_corrections')
+      .select('mask_path')
+      .eq('id', correction_id)
       .single();
 
-    if (fetchError || !scan) {
-      return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
+    if (fetchError || !correction) {
+      return NextResponse.json({ error: 'Correction not found' }, { status: 404 });
     }
 
-    const existingMetadata = scan.metadata || {};
-    const tracings = (existingMetadata.tracings || []).filter(
-      (t: any) => t.id !== tracing_id
-    );
+    // Delete the mask file from storage if it exists
+    if (correction.mask_path) {
+      const { error: deleteStorageError } = await supabase.storage
+        .from('mri-scans')
+        .remove([correction.mask_path]);
 
-    // Update scan with removed tracing
-    const { error: updateError } = await supabase
-      .from('mri_scans')
-      .update({
-        metadata: {
-          ...existingMetadata,
-          tracings,
-        },
-      })
-      .eq('id', scan_id);
+      if (deleteStorageError) {
+        console.warn('Failed to delete mask file:', deleteStorageError);
+        // Continue with deletion even if storage cleanup fails
+      }
+    }
 
-    if (updateError) {
+    // Delete from mask_corrections table
+    const { error: deleteError } = await supabase
+      .from('mask_corrections')
+      .delete()
+      .eq('id', correction_id);
+
+    if (deleteError) {
+      console.error('Delete error:', deleteError);
       return NextResponse.json(
-        { error: 'Failed to delete tracing' },
+        { error: 'Failed to delete correction' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Tracing deleted successfully',
+      message: 'Correction deleted successfully',
     });
   } catch (error: any) {
     console.error('Tracings API error:', error);

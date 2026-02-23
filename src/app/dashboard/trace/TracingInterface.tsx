@@ -26,8 +26,12 @@ import {
   CheckCircle,
   Info,
   Activity,
+  History,
+  Trash2,
+  Eye,
+  X,
 } from 'lucide-react';
-import type { MRIScan, AnalysisResult } from '@/types/database';
+import type { MRIScan, AnalysisResult, MaskCorrection } from '@/types/database';
 import { getSignedUrl } from '@/lib/storage/upload';
 import { fetchAndParseNIfTI, type NIfTIData } from '@/lib/nifti/parser';
 import { getAnalyses } from '@/lib/api/analyses';
@@ -109,6 +113,11 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showScanSelector, setShowScanSelector] = useState(false);
 
+  // Corrections history state
+  const [corrections, setCorrections] = useState<MaskCorrection[]>([]);
+  const [isLoadingCorrections, setIsLoadingCorrections] = useState(false);
+  const [loadedCorrectionId, setLoadedCorrectionId] = useState<string | null>(null);
+
   // Load demo data on mount
   useEffect(() => {
     const demo = generateDemoData();
@@ -116,6 +125,77 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
     setDimensions(demo.dimensions);
     setCurrentSlice(Math.floor(demo.dimensions[2] / 2));
   }, []);
+
+  // Fetch corrections for a scan
+  const fetchCorrections = async (scanId: string) => {
+    setIsLoadingCorrections(true);
+    try {
+      const response = await fetch(`/api/tracings?scan_id=${scanId}`);
+      const result = await response.json();
+      if (response.ok && result.data?.corrections) {
+        setCorrections(result.data.corrections);
+      } else {
+        setCorrections([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch corrections:', err);
+      setCorrections([]);
+    } finally {
+      setIsLoadingCorrections(false);
+    }
+  };
+
+  // Delete a correction
+  const handleDeleteCorrection = async (correctionId: string) => {
+    if (!confirm('Are you sure you want to delete this correction?')) return;
+
+    try {
+      const response = await fetch(`/api/tracings?correction_id=${correctionId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setCorrections(prev => prev.filter(c => c.id !== correctionId));
+        setSuccessMessage('Correction deleted');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        const result = await response.json();
+        setError(result.error || 'Failed to delete correction');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete correction');
+    }
+  };
+
+  // Load a saved correction onto the canvas
+  const handleLoadCorrection = async (correction: MaskCorrection) => {
+    // Navigate to the slice and orientation
+    setCurrentSlice(correction.slice_index);
+    setOrientation(correction.orientation as ViewOrientation);
+    setActiveSide(correction.side === 'both' ? 'left' : correction.side as HippocampusSide);
+
+    // Load the mask image onto the canvas if available
+    if (correction.actions?.mask_base64 && tracingCanvasRef.current) {
+      try {
+        await tracingCanvasRef.current.loadFromBase64(correction.actions.mask_base64);
+        setLoadedCorrectionId(correction.id);
+        setSuccessMessage(`Loaded correction for slice ${correction.slice_index + 1}`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } catch (err) {
+        console.error('Failed to load correction image:', err);
+        setError('Failed to load correction image');
+      }
+    } else {
+      setSuccessMessage(`Navigated to slice ${correction.slice_index + 1}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  };
+
+  // Clear the loaded correction from canvas
+  const handleClearCanvas = () => {
+    tracingCanvasRef.current?.clearTracing();
+    setLoadedCorrectionId(null);
+  };
 
   // Handle scan selection
   const handleScanSelect = async (scan: MRIScan) => {
@@ -174,6 +254,9 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
 
       // Clear existing tracings
       tracingCanvasRef.current?.clearTracing();
+
+      // Fetch corrections history for this scan
+      fetchCorrections(scan.id);
     } catch (err: any) {
       console.error('Failed to load scan:', err);
       setError(err.message || 'Failed to load scan');
@@ -190,8 +273,8 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
 
   // Handle save tracing
   const handleSave = async () => {
-    if (!selectedScan && !imageData) {
-      setError('No scan selected or loaded');
+    if (!selectedScan) {
+      setError('No scan selected. Please select a scan first.');
       return;
     }
 
@@ -203,17 +286,61 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
       const maskData = tracingCanvasRef.current?.getMaskData();
 
       if (!maskData?.left && !maskData?.right) {
-        throw new Error('No tracing data to save');
+        throw new Error('No tracing data to save. Please draw corrections first.');
       }
 
-      // In production, this would call the API to save the tracing
-      // For now, simulate a save
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Get the tracing data as ImageData
+      const tracingData = tracingCanvasRef.current?.getTracingData();
+      let base64Data = '';
 
-      setSuccessMessage('Tracing saved successfully!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      if (tracingData) {
+        // Convert ImageData to base64 PNG
+        const canvas = document.createElement('canvas');
+        canvas.width = tracingData.width;
+        canvas.height = tracingData.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.putImageData(tracingData, 0, 0);
+          base64Data = canvas.toDataURL('image/png');
+        }
+      }
+
+      // Call the API to save the correction
+      const response = await fetch('/api/tracings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scan_id: selectedScan.id,
+          mask_data: base64Data,
+          slice_index: currentSlice,
+          orientation: orientation,
+          metadata: {
+            side: activeSide,
+            tool: activeTool,
+            brushSize: brushSize,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save correction');
+      }
+
+      // Show detailed success message
+      const { data } = result;
+      setSuccessMessage(
+        `Correction saved! Slice ${data.slice_index + 1} (${data.orientation}) for ${data.patient_name} - ID: ${data.id.slice(0, 8)}`
+      );
+      setTimeout(() => setSuccessMessage(null), 5000);
+
+      // Refresh corrections list
+      if (selectedScan) {
+        fetchCorrections(selectedScan.id);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to save tracing');
+      setError(err.message || 'Failed to save correction');
     } finally {
       setIsSaving(false);
     }
@@ -308,7 +435,10 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
                           {(scan as any).patients?.full_name || 'Unknown'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {scan.scan_type} - {new Date(scan.scan_date).toLocaleDateString()}
+                          {scan.scan_type} - {new Date(scan.scan_date).toLocaleString([], {
+                            dateStyle: 'short',
+                            timeStyle: 'short'
+                          })} - ID: {scan.id.slice(0, 8)}
                         </p>
                       </button>
                     ))
@@ -347,7 +477,7 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
         canRedo={canRedo}
         onUndo={() => tracingCanvasRef.current?.undo()}
         onRedo={() => tracingCanvasRef.current?.redo()}
-        onClear={() => tracingCanvasRef.current?.clearTracing()}
+        onClear={handleClearCanvas}
         onSave={handleSave}
         onExport={handleExport}
         isSaving={isSaving}
@@ -570,6 +700,99 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
               </div>
             </div>
           </Card>
+
+          {/* Corrections History */}
+          {selectedScan && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Saved Corrections
+                {corrections.length > 0 && (
+                  <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    {corrections.length}
+                  </span>
+                )}
+              </h3>
+
+              {/* Clear canvas button when correction is loaded */}
+              {loadedCorrectionId && (
+                <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Correction loaded on canvas
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-blue-700 hover:text-blue-900 dark:text-blue-300"
+                      onClick={handleClearCanvas}
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {isLoadingCorrections ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Loading...
+                  </p>
+                ) : corrections.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    No corrections saved yet
+                  </p>
+                ) : (
+                  corrections.map((correction) => (
+                    <div
+                      key={correction.id}
+                      className={`flex items-center justify-between p-2 rounded-lg text-sm ${
+                        loadedCorrectionId === correction.id
+                          ? 'bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700'
+                          : 'bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          Slice {correction.slice_index + 1} ({correction.orientation})
+                          {loadedCorrectionId === correction.id && (
+                            <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">(loaded)</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {correction.side} · {new Date(correction.created_at).toLocaleString([], {
+                            dateStyle: 'short',
+                            timeStyle: 'short'
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-primary hover:text-primary"
+                          onClick={() => handleLoadCorrection(correction)}
+                          title="Load correction onto canvas"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteCorrection(correction.id)}
+                          title="Delete correction"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>

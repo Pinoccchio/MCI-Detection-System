@@ -30,6 +30,7 @@ export interface TracingCanvasRef {
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
+  loadFromBase64: (base64Data: string) => Promise<void>;
 }
 
 interface TracingCanvasProps {
@@ -65,11 +66,13 @@ export const TracingCanvas = forwardRef<TracingCanvasRef, TracingCanvasProps>(
     ref
   ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const baseImageRef = useRef<HTMLImageElement | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentPoints, setCurrentPoints] = useState<Point[]>([]);
     const [polygonPoints, setPolygonPoints] = useState<Point[]>([]);
     const [actions, setActions] = useState<TracingAction[]>([]);
     const [redoStack, setRedoStack] = useState<TracingAction[]>([]);
+    const [baseImageVersion, setBaseImageVersion] = useState(0); // Trigger re-render when base image changes
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
@@ -119,9 +122,11 @@ export const TracingCanvas = forwardRef<TracingCanvasRef, TracingCanvasProps>(
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.clearRect(0, 0, width, height);
+        baseImageRef.current = null;
         setActions([]);
         setRedoStack([]);
         setPolygonPoints([]);
+        setBaseImageVersion(v => v + 1);
         onTracingChange?.();
       },
       undo: () => {
@@ -142,6 +147,32 @@ export const TracingCanvas = forwardRef<TracingCanvasRef, TracingCanvasProps>(
       },
       canUndo: () => actions.length > 0,
       canRedo: () => redoStack.length > 0,
+      loadFromBase64: async (base64Data: string) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        return new Promise<void>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            // Store the image as base image
+            baseImageRef.current = img;
+            // Clear actions since we loaded an image
+            setActions([]);
+            setRedoStack([]);
+            setPolygonPoints([]);
+            // Trigger re-render
+            setBaseImageVersion(v => v + 1);
+            onTracingChange?.();
+            resolve();
+          };
+          img.onerror = () => {
+            reject(new Error('Failed to load correction image'));
+          };
+          img.src = base64Data;
+        });
+      },
     }));
 
     // Redraw all actions
@@ -153,6 +184,11 @@ export const TracingCanvas = forwardRef<TracingCanvasRef, TracingCanvasProps>(
         if (!ctx) return;
 
         ctx.clearRect(0, 0, width, height);
+
+        // Draw base image first if exists
+        if (baseImageRef.current) {
+          ctx.drawImage(baseImageRef.current, 0, 0, width, height);
+        }
 
         actionList.forEach((action) => {
           const color = COLORS[action.side];
@@ -211,7 +247,7 @@ export const TracingCanvas = forwardRef<TracingCanvasRef, TracingCanvasProps>(
       canvas.width = width;
       canvas.height = height;
       redrawCanvas(actions);
-    }, [width, height, redrawCanvas, actions]);
+    }, [width, height, redrawCanvas, actions, baseImageVersion]);
 
     // Get mouse position relative to canvas
     const getCanvasPoint = (e: React.MouseEvent): Point => {

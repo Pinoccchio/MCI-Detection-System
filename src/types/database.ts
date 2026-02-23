@@ -131,3 +131,41 @@ export interface CreateUserProfileInput {
   department?: string | null;
   contact_number?: string | null;
 }
+
+export interface TracingAction {
+  type: 'draw' | 'erase';
+  tool: 'pen' | 'eraser' | 'polygon';
+  points: { x: number; y: number }[];
+  brushSize: number;
+  side: 'left' | 'right';
+  timestamp: number;
+}
+
+export interface MaskCorrectionActions {
+  mask_base64?: string | null;
+  tool?: string | null;
+  brushSize?: number | null;
+  timestamp?: number;
+}
+
+export interface MaskCorrection {
+  id: string;
+  scan_id: string;
+  slice_index: number;
+  orientation: 'axial' | 'sagittal' | 'coronal';
+  side: 'left' | 'right' | 'both';
+  mask_path?: string | null;
+  actions?: MaskCorrectionActions | null;
+  corrected_by?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CreateMaskCorrectionInput {
+  scan_id: string;
+  slice_index: number;
+  orientation: 'axial' | 'sagittal' | 'coronal';
+  side: 'left' | 'right' | 'both';
+  mask_data?: string; // base64 PNG data
+  actions?: TracingAction[];
+}
