@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Patient } from '@/types/database';
+import { Patient, UserRole } from '@/types/database';
 import { formatDate } from '@/lib/utils';
 import { Search, Eye, Edit, Trash2, UserPlus, AlertTriangle, Filter, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -21,13 +21,16 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 interface PatientTableProps {
   patients: Patient[];
   onDelete?: (id: string) => void;
+  userRole?: UserRole;
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function PatientTable({ patients, onDelete }: PatientTableProps) {
+export function PatientTable({ patients, onDelete, userRole = 'admin' }: PatientTableProps) {
+  // Clinicians have read-only access
+  const isReadOnly = userRole === 'clinician';
   const [searchTerm, setSearchTerm] = useState('');
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -127,12 +130,14 @@ export function PatientTable({ patients, onDelete }: PatientTableProps) {
           </Button>
         </div>
 
-        <Link href="/dashboard/patients/new">
-          <Button>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Patient
-          </Button>
-        </Link>
+        {!isReadOnly && (
+          <Link href="/dashboard/patients/new">
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Patient
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Advanced Filters */}
@@ -270,16 +275,18 @@ export function PatientTable({ patients, onDelete }: PatientTableProps) {
                             <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                           </Button>
                         </Link>
-                        <Link href={`/dashboard/patients/${patient.id}/edit`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                            title="Edit patient information"
-                          >
-                            <Edit className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                          </Button>
-                        </Link>
+                        {!isReadOnly && (
+                          <Link href={`/dashboard/patients/${patient.id}/edit`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 w-9 p-0 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                              title="Edit patient information"
+                            >
+                              <Edit className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                            </Button>
+                          </Link>
+                        )}
                         {onDelete && (
                           <Button
                             variant="ghost"

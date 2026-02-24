@@ -34,7 +34,6 @@ import {
 import type { MRIScan, AnalysisResult, MaskCorrection } from '@/types/database';
 import { getSignedUrl } from '@/lib/storage/upload';
 import { fetchAndParseNIfTI, type NIfTIData } from '@/lib/nifti/parser';
-import { getAnalyses } from '@/lib/api/analyses';
 
 interface TracingInterfaceProps {
   scans: MRIScan[];
@@ -210,13 +209,27 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
         throw new Error('Scan has no file path');
       }
 
+      // Start parallel fetches for analysis and corrections immediately
+      // These don't depend on the NIfTI file being loaded
+      const analysisPromise = fetch(`/api/analyses?scanId=${scan.id}&limit=1`)
+        .then(res => res.ok ? res.json() : { analyses: [] })
+        .catch((err) => {
+          console.warn('[TracingInterface] Could not fetch analysis result:', err);
+          return { analyses: [] };
+        });
+
+      const correctionsPromise = fetch(`/api/tracings?scan_id=${scan.id}`)
+        .then(res => res.json())
+        .then(result => result.data?.corrections || [])
+        .catch(() => []);
+
       // Get signed URL for the scan file
       const urlResult = await getSignedUrl('mri-scans', scan.file_path, 3600);
       if (!urlResult.url) {
         throw new Error(urlResult.error || 'Failed to get scan URL');
       }
 
-      // Fetch and parse the NIfTI file
+      // Fetch and parse the NIfTI file (this is the slowest operation)
       const niftiData = await fetchAndParseNIfTI(urlResult.url, scan.file_path);
 
       // Store mask statistics for display
@@ -234,19 +247,22 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
         setMaskStats(null);
       }
 
-      // Fetch the analysis result for this scan
-      try {
-        const { analyses } = await getAnalyses({ scanId: scan.id, limit: 1 });
-        if (analyses && analyses.length > 0) {
-          setAnalysisResult(analyses[0]);
-          console.log(`[TracingInterface] Analysis result: ${analyses[0].prediction} (${(analyses[0].confidence * 100).toFixed(1)}%)`);
-        } else {
-          setAnalysisResult(null);
-        }
-      } catch (err) {
-        console.warn('[TracingInterface] Could not fetch analysis result:', err);
+      // Wait for parallel fetches to complete
+      const [analysisResult, correctionsData] = await Promise.all([
+        analysisPromise,
+        correctionsPromise,
+      ]);
+
+      // Set analysis result
+      if (analysisResult.analyses && analysisResult.analyses.length > 0) {
+        setAnalysisResult(analysisResult.analyses[0]);
+        console.log(`[TracingInterface] Analysis result: ${analysisResult.analyses[0].prediction} (${(analysisResult.analyses[0].confidence * 100).toFixed(1)}%)`);
+      } else {
         setAnalysisResult(null);
       }
+
+      // Set corrections
+      setCorrections(correctionsData);
 
       setImageData(niftiData.data);
       setDimensions(niftiData.dimensions);
@@ -254,9 +270,6 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
 
       // Clear existing tracings
       tracingCanvasRef.current?.clearTracing();
-
-      // Fetch corrections history for this scan
-      fetchCorrections(scan.id);
     } catch (err: any) {
       console.error('Failed to load scan:', err);
       setError(err.message || 'Failed to load scan');

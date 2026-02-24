@@ -51,6 +51,7 @@ export default async function PatientsPage() {
       <PatientTable
         patients={patients}
         onDelete={user.profile.role === 'admin' ? deletePatient : undefined}
+        userRole={user.profile.role}
       />
     </div>
   );

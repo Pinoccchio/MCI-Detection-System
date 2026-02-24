@@ -52,7 +52,9 @@ export function MRIViewer({
   maskColor = { r: 0, g: 200, b: 255 }, // Cyan color for hippocampus
   children,
 }: MRIViewerProps) {
+  // Separate refs for normal and fullscreen canvases to avoid ref conflicts
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fullscreenCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [orientation, setOrientation] = useState<ViewOrientation>(initialOrientation);
@@ -147,13 +149,9 @@ export function MRIViewer({
     [imageData, dimensions, orientation]
   );
 
-  // Render the slice to canvas
+  // Render the slice to canvas (renders to both normal and fullscreen canvas if available)
   const renderSlice = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !imageData) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!imageData) return;
 
     const sliceData = extractSlice(currentSlice);
     if (!sliceData) return;
@@ -161,77 +159,129 @@ export function MRIViewer({
     const height = sliceData.length;
     const width = sliceData[0]?.length || 0;
 
-    // Set canvas size
-    canvas.width = width;
-    canvas.height = height;
+    // Helper to render to a specific canvas
+    const renderToCanvas = (canvas: HTMLCanvasElement | null) => {
+      if (!canvas) return;
 
-    // Create image data
-    const imgData = ctx.createImageData(width, height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    if (displayMode === 'mask') {
-      // Mask mode: Show non-zero regions in color on dark background
-      // Better for viewing sparse segmentation masks
-      const bgColor = { r: 20, g: 25, b: 35 }; // Dark blue-gray background
+      // Set canvas size
+      canvas.width = width;
+      canvas.height = height;
 
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const val = sliceData[y][x];
-          const idx = (y * width + x) * 4;
+      // Create image data
+      const imgData = ctx.createImageData(width, height);
 
-          if (val > 0.01) {
-            // Non-zero: show in mask color with intensity
-            const intensity = Math.min(1, val);
-            imgData.data[idx] = Math.floor(maskColor.r * intensity); // R
-            imgData.data[idx + 1] = Math.floor(maskColor.g * intensity); // G
-            imgData.data[idx + 2] = Math.floor(maskColor.b * intensity); // B
+      if (displayMode === 'mask') {
+        // Mask mode: Show non-zero regions in color on dark background
+        const bgColor = { r: 20, g: 25, b: 35 }; // Dark blue-gray background
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const val = sliceData[y][x];
+            const idx = (y * width + x) * 4;
+
+            if (val > 0.01) {
+              // Non-zero: show in mask color with intensity
+              const intensity = Math.min(1, val);
+              imgData.data[idx] = Math.floor(maskColor.r * intensity); // R
+              imgData.data[idx + 1] = Math.floor(maskColor.g * intensity); // G
+              imgData.data[idx + 2] = Math.floor(maskColor.b * intensity); // B
+              imgData.data[idx + 3] = 255; // A
+            } else {
+              // Zero: dark background
+              imgData.data[idx] = bgColor.r;
+              imgData.data[idx + 1] = bgColor.g;
+              imgData.data[idx + 2] = bgColor.b;
+              imgData.data[idx + 3] = 255;
+            }
+          }
+        }
+      } else {
+        // Grayscale mode: Standard MRI visualization with window/level
+        const windowMin = windowLevel.center - windowLevel.width / 2;
+        const windowMax = windowLevel.center + windowLevel.width / 2;
+        const windowRange = windowMax - windowMin;
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const val = sliceData[y][x];
+
+            // Apply window/level contrast adjustment
+            let adjusted = windowRange > 0 ? (val - windowMin) / windowRange : val;
+            adjusted = Math.max(0, Math.min(1, adjusted));
+
+            const pixelVal = Math.floor(adjusted * 255);
+            const idx = (y * width + x) * 4;
+
+            imgData.data[idx] = pixelVal; // R
+            imgData.data[idx + 1] = pixelVal; // G
+            imgData.data[idx + 2] = pixelVal; // B
             imgData.data[idx + 3] = 255; // A
-          } else {
-            // Zero: dark background
-            imgData.data[idx] = bgColor.r;
-            imgData.data[idx + 1] = bgColor.g;
-            imgData.data[idx + 2] = bgColor.b;
-            imgData.data[idx + 3] = 255;
           }
         }
       }
-    } else {
-      // Grayscale mode: Standard MRI visualization with window/level
-      const windowMin = windowLevel.center - windowLevel.width / 2;
-      const windowMax = windowLevel.center + windowLevel.width / 2;
-      const windowRange = windowMax - windowMin;
 
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const val = sliceData[y][x];
+      ctx.putImageData(imgData, 0, 0);
+    };
 
-          // Apply window/level contrast adjustment
-          let adjusted = windowRange > 0 ? (val - windowMin) / windowRange : val;
-          adjusted = Math.max(0, Math.min(1, adjusted));
+    // Always render to normal canvas
+    renderToCanvas(canvasRef.current);
 
-          const pixelVal = Math.floor(adjusted * 255);
-          const idx = (y * width + x) * 4;
-
-          imgData.data[idx] = pixelVal; // R
-          imgData.data[idx + 1] = pixelVal; // G
-          imgData.data[idx + 2] = pixelVal; // B
-          imgData.data[idx + 3] = 255; // A
-        }
-      }
+    // Also render to fullscreen canvas if it exists (fullscreen is open)
+    if (isFullscreen) {
+      renderToCanvas(fullscreenCanvasRef.current);
     }
-
-    ctx.putImageData(imgData, 0, 0);
-  }, [currentSlice, extractSlice, imageData, windowLevel, displayMode, maskColor]);
+  }, [currentSlice, extractSlice, imageData, windowLevel, displayMode, maskColor, isFullscreen]);
 
   // Render on data change
   useEffect(() => {
     renderSlice();
   }, [renderSlice]);
 
+  // Re-render when entering fullscreen to populate fullscreen canvas
+  useEffect(() => {
+    if (isFullscreen) {
+      // Small delay to ensure the fullscreen canvas is mounted
+      const timer = setTimeout(() => {
+        renderSlice();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullscreen, renderSlice]);
+
   // Reset slice when orientation changes
   useEffect(() => {
     const maxSlices = getMaxSlices();
     setCurrentSlice(Math.floor(maxSlices / 2));
   }, [orientation, getMaxSlices]);
+
+  // Handle keyboard events for fullscreen (Escape to exit, arrow keys for navigation)
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'Escape':
+          setIsFullscreen(false);
+          break;
+        case 'ArrowUp':
+        case 'ArrowRight':
+          e.preventDefault();
+          handleSliceChange(currentSlice + 1);
+          break;
+        case 'ArrowDown':
+        case 'ArrowLeft':
+          e.preventDefault();
+          handleSliceChange(currentSlice - 1);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen, currentSlice]);
 
   // Handle slice change
   const handleSliceChange = (newSlice: number) => {
@@ -281,30 +331,128 @@ export function MRIViewer({
 
   // Fullscreen modal
   const FullscreenModal = () => (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="flex justify-between items-center p-4 bg-black/80">
-        <span className="text-white">
-          {orientation.charAt(0).toUpperCase() + orientation.slice(1)} View - Slice{' '}
-          {currentSlice + 1}/{maxSlices}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-white hover:bg-white/20"
-          onClick={() => setIsFullscreen(false)}
-        >
-          <X className="h-6 w-6" />
-        </Button>
+    <div
+      className="fixed inset-0 z-50 bg-black flex flex-col"
+      onWheel={handleWheel}
+    >
+      {/* Header with orientation tabs and controls */}
+      <div className="flex justify-between items-center p-3 bg-black/80 border-b border-white/10">
+        {/* Orientation selector */}
+        <div className="flex items-center gap-1">
+          {(['axial', 'sagittal', 'coronal'] as ViewOrientation[]).map((view) => (
+            <Button
+              key={view}
+              variant={orientation === view ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setOrientation(view)}
+              className={orientation === view ? '' : 'text-white/70 hover:text-white hover:bg-white/10'}
+            >
+              {view.charAt(0).toUpperCase() + view.slice(1)}
+            </Button>
+          ))}
+        </div>
+
+        {/* Zoom controls and close */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
+            title="Zoom out"
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-white/70 w-12 text-center">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
+            title="Zoom in"
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={resetView}
+            title="Reset view"
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+          <div className="w-px h-6 bg-white/20 mx-2" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20"
+            onClick={() => setIsFullscreen(false)}
+            title="Exit fullscreen (Esc)"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
       </div>
+
+      {/* Canvas area */}
       <div className="flex-1 flex items-center justify-center overflow-hidden">
         <canvas
-          ref={canvasRef}
+          ref={fullscreenCanvasRef}
           className="max-w-full max-h-full object-contain"
           style={{
             transform: `scale(${zoom * 2}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
             imageRendering: 'pixelated',
           }}
         />
+      </div>
+
+      {/* Slice navigator footer */}
+      <div
+        className="flex items-center gap-3 p-3 bg-black/80 border-t border-white/10"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleSliceChange(currentSlice - 1)}
+          disabled={currentSlice <= 0}
+          className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <div
+          className="flex-1 relative h-8 flex items-center px-2"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <input
+            type="range"
+            min={0}
+            max={maxSlices - 1}
+            value={currentSlice}
+            onChange={(e) => handleSliceChange(parseInt(e.target.value))}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="slice-slider w-full cursor-pointer"
+          />
+        </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleSliceChange(currentSlice + 1)}
+          disabled={currentSlice >= maxSlices - 1}
+          className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+
+        <span className="text-sm text-white/70 min-w-[100px] text-center">
+          Slice {currentSlice + 1} / {maxSlices}
+        </span>
       </div>
     </div>
   );
@@ -438,14 +586,14 @@ export function MRIViewer({
               <ChevronLeft className="h-4 w-4" />
             </Button>
 
-            <div className="flex-1">
+            <div className="flex-1 relative h-8 flex items-center px-2">
               <input
                 type="range"
                 min={0}
                 max={maxSlices - 1}
                 value={currentSlice}
                 onChange={(e) => handleSliceChange(parseInt(e.target.value))}
-                className="w-full accent-primary"
+                className="slice-slider w-full cursor-pointer"
               />
             </div>
 

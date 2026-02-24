@@ -75,15 +75,14 @@ export async function parseNIfTI(
     if (val !== 0) nonZeroCount++;
   }
 
-  console.log(`[NIfTI Parser] File: ${filename}`);
-  console.log(`[NIfTI Parser] Dimensions: ${dimX} x ${dimY} x ${dimZ}`);
-  console.log(`[NIfTI Parser] Datatype: ${header.datatypeCode}`);
-  console.log(`[NIfTI Parser] Value range: ${min} to ${max}`);
-  console.log(`[NIfTI Parser] Non-zero voxels: ${nonZeroCount} / ${typedArray.length} (${(nonZeroCount / typedArray.length * 100).toFixed(2)}%)`);
-  console.log(`[NIfTI Parser] Scale slope: ${header.scl_slope}, intercept: ${header.scl_inter}`);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[NIfTI Parser] File: ${filename}, Dims: ${dimX}x${dimY}x${dimZ}, Range: ${min}-${max}, NonZero: ${nonZeroCount}/${typedArray.length}`);
+  }
 
   // Convert to 3D array (x, y, z) with normalized values
-  const volume = convertTo3DArray(typedArray, dimX, dimY, dimZ, header);
+  // Pass precomputed min/max to avoid redundant calculation
+  const volume = convertTo3DArray(typedArray, dimX, dimY, dimZ, header, min, max);
 
   return {
     data: volume,
@@ -150,59 +149,66 @@ function getTypedArray(
 
 /**
  * Convert flat typed array to 3D array with normalized values
+ * Optimized version: pre-allocates arrays and reuses min/max from stats
  */
 function convertTo3DArray(
   typedArray: Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array,
   dimX: number,
   dimY: number,
   dimZ: number,
-  header: nifti.NIFTI1 | nifti.NIFTI2
+  header: nifti.NIFTI1 | nifti.NIFTI2,
+  precomputedMin?: number,
+  precomputedMax?: number
 ): number[][][] {
-  // Find min and max for normalization
-  let min = Infinity;
-  let max = -Infinity;
+  // Use precomputed values if available, otherwise compute
+  let min = precomputedMin ?? Infinity;
+  let max = precomputedMax ?? -Infinity;
 
-  for (let i = 0; i < typedArray.length; i++) {
-    const val = typedArray[i];
-    if (val < min) min = val;
-    if (val > max) max = val;
+  if (precomputedMin === undefined || precomputedMax === undefined) {
+    for (let i = 0; i < typedArray.length; i++) {
+      const val = typedArray[i];
+      if (val < min) min = val;
+      if (val > max) max = val;
+    }
   }
 
   // Apply scaling if present
   const slope = header.scl_slope || 1;
   const intercept = header.scl_inter || 0;
+  const applyScaling = slope !== 0 && slope !== 1;
 
-  if (slope !== 0 && slope !== 1) {
+  if (applyScaling) {
     min = min * slope + intercept;
     max = max * slope + intercept;
   }
 
   const range = max - min;
+  const invRange = range > 0 ? 1 / range : 0;
 
-  // Create 3D array (x, y, z)
-  const volume: number[][][] = [];
+  // Pre-allocate 3D array for better performance
+  const volume: number[][][] = new Array(dimX);
 
   for (let x = 0; x < dimX; x++) {
-    const plane: number[][] = [];
+    const plane: number[][] = new Array(dimY);
     for (let y = 0; y < dimY; y++) {
-      const row: number[] = [];
+      const row: number[] = new Array(dimZ);
+      const baseIdx = x + y * dimX;
       for (let z = 0; z < dimZ; z++) {
         // NIfTI stores data in x-fastest order (column-major for 3D)
-        const idx = x + y * dimX + z * dimX * dimY;
+        const idx = baseIdx + z * dimX * dimY;
         let val = typedArray[idx];
 
         // Apply scaling
-        if (slope !== 0 && slope !== 1) {
+        if (applyScaling) {
           val = val * slope + intercept;
         }
 
-        // Normalize to 0-1 range
-        const normalized = range > 0 ? (val - min) / range : 0;
-        row.push(normalized);
+        // Normalize to 0-1 range (using multiplication instead of division)
+        row[z] = (val - min) * invRange;
       }
-      plane.push(row);
+      plane[y] = row;
     }
-    volume.push(plane);
+    volume[x] = plane;
   }
 
   return volume;
