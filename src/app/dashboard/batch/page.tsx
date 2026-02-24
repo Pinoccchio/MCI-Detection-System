@@ -5,7 +5,9 @@
 
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/actions';
-import { Upload, Play, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { getScans } from '@/lib/api/scans';
+import { BatchProcessor } from '@/components/batch/BatchProcessor';
+import { Upload, Play, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 export default async function BatchProcessingPage() {
   // Check authentication and role
@@ -19,6 +21,15 @@ export default async function BatchProcessingPage() {
   if (user.profile.role !== 'researcher') {
     redirect('/dashboard');
   }
+
+  // Fetch available scans (completed status with files)
+  const { scans, total, error } = await getScans({
+    status: 'completed',
+    limit: 200,
+  });
+
+  // Calculate stats
+  const availableScans = scans.filter((s) => s.file_path);
 
   return (
     <div className="space-y-6">
@@ -42,21 +53,21 @@ export default async function BatchProcessingPage() {
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="font-semibold">Total Jobs</h3>
+            <h3 className="font-semibold">Available Scans</h3>
           </div>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-sm text-muted-foreground mt-1">All time</p>
+          <p className="text-3xl font-bold">{availableScans.length}</p>
+          <p className="text-sm text-muted-foreground mt-1">Ready to analyze</p>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Play className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
-            <h3 className="font-semibold">In Progress</h3>
+            <h3 className="font-semibold">Total Scans</h3>
           </div>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-sm text-muted-foreground mt-1">Processing now</p>
+          <p className="text-3xl font-bold">{total}</p>
+          <p className="text-sm text-muted-foreground mt-1">In system</p>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6">
@@ -64,44 +75,77 @@ export default async function BatchProcessingPage() {
             <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
               <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="font-semibold">Completed</h3>
+            <h3 className="font-semibold">Status</h3>
           </div>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-sm text-muted-foreground mt-1">Successfully</p>
+          <p className="text-3xl font-bold">Ready</p>
+          <p className="text-sm text-muted-foreground mt-1">No active batch</p>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <XCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             </div>
-            <h3 className="font-semibold">Failed</h3>
+            <h3 className="font-semibold">Session Results</h3>
           </div>
           <p className="text-3xl font-bold">0</p>
-          <p className="text-sm text-muted-foreground mt-1">Errors</p>
+          <p className="text-sm text-muted-foreground mt-1">This session</p>
         </div>
       </div>
 
-      {/* Coming Soon Notice */}
-      <div className="bg-card border border-border rounded-lg p-12 text-center">
-        <div className="max-w-md mx-auto">
-          <div className="p-4 bg-primary/10 rounded-full w-fit mx-auto mb-4">
-            <Play className="h-12 w-12 text-primary" />
+      {/* Batch Processor */}
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Play className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-2xl font-bold mb-3">Batch Processing</h2>
-          <p className="text-muted-foreground mb-6">
-            This feature is currently under development. You'll be able to process multiple MRI scans in parallel for large-scale research.
-          </p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Planned Features:</h3>
-            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 text-left max-w-xs mx-auto">
-              <li>• Upload and process multiple scans at once</li>
-              <li>• Queue management with priority levels</li>
-              <li>• Automatic retry on failures</li>
-              <li>• Export batch results to CSV or JSON</li>
-              <li>• Email notifications on completion</li>
-              <li>• Progress tracking and ETA estimates</li>
-            </ul>
+          <div>
+            <h3 className="font-semibold">Batch Analysis</h3>
+            <p className="text-sm text-muted-foreground">
+              Select scans and run batch analysis with progress tracking
+            </p>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Error loading scans: {error}</p>
+          </div>
+        ) : availableScans.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No scans available for batch processing</p>
+            <p className="text-sm mt-2">
+              Upload MRI scans with completed status to enable batch analysis
+            </p>
+          </div>
+        ) : (
+          <BatchProcessor scans={availableScans} userId={user.id} />
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
+          How Batch Processing Works
+        </h3>
+        <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-700 dark:text-blue-300">
+          <div>
+            <p className="font-medium mb-1">1. Select Scans</p>
+            <p>Choose the MRI scans you want to analyze from the list above.</p>
+          </div>
+          <div>
+            <p className="font-medium mb-1">2. Start Processing</p>
+            <p>Click &quot;Start Batch Analysis&quot; to begin. Scans are processed sequentially.</p>
+          </div>
+          <div>
+            <p className="font-medium mb-1">3. Monitor Progress</p>
+            <p>Track the status of each scan. You can pause and resume at any time.</p>
+          </div>
+          <div>
+            <p className="font-medium mb-1">4. Export Results</p>
+            <p>When complete, export all results to CSV or JSON for your research.</p>
           </div>
         </div>
       </div>

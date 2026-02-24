@@ -17,6 +17,12 @@ export default async function ResultsPage() {
     redirect('/');
   }
 
+  // Researchers should not access individual analysis results
+  // They work with aggregated data via Reports and Analytics
+  if (user.profile.role === 'researcher') {
+    redirect('/dashboard/reports');
+  }
+
   // Fetch analyses
   const { analyses, error } = await getAnalyses();
 

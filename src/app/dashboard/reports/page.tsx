@@ -143,11 +143,14 @@ export default async function ReportsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/results/${report.analysis_id}`}>
-                          <Button variant="ghost" size="sm" title="View Original Analysis">
-                            <Brain className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        {/* Only show View Analysis button for clinicians/admins */}
+                        {user.profile?.role !== 'researcher' && (
+                          <Link href={`/dashboard/results/${report.analysis_id}`}>
+                            <Button variant="ghost" size="sm" title="View Original Analysis">
+                              <Brain className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        )}
                         <ReportActions
                           reportId={report.id}
                           pdfPath={report.pdf_path}

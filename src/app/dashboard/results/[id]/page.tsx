@@ -33,6 +33,12 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
     redirect('/');
   }
 
+  // Researchers should not access individual analysis results
+  // They work with aggregated data via Reports and Analytics
+  if (user.profile.role === 'researcher') {
+    redirect('/dashboard/reports');
+  }
+
   // Fetch analysis result
   const { analysis, error } = await getAnalysisById(id);
 

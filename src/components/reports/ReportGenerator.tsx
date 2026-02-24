@@ -7,9 +7,8 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { generateReportHTML } from '@/lib/pdf/generator';
 import { createReport } from '@/lib/api/reports';
-import { FileText, Loader2, CheckCircle, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Loader2, CheckCircle } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -25,16 +24,6 @@ interface ReportGeneratorProps {
 }
 
 type GenerationStatus = 'idle' | 'generating' | 'success' | 'error';
-
-interface ReportSections {
-  patientInfo: boolean;
-  scanDetails: boolean;
-  prediction: boolean;
-  probabilities: boolean;
-  volumetry: boolean;
-  features: boolean;
-  recommendations: boolean;
-}
 
 // ============================================================================
 // COMPONENT
@@ -52,30 +41,6 @@ export function ReportGenerator({
   const [error, setError] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [reportType, setReportType] = useState<'clinical' | 'research'>('clinical');
-  const [showCustomization, setShowCustomization] = useState(false);
-  const [sections, setSections] = useState<ReportSections>({
-    patientInfo: true,
-    scanDetails: true,
-    prediction: true,
-    probabilities: true,
-    volumetry: true,
-    features: false,
-    recommendations: true,
-  });
-
-  const toggleSection = (key: keyof ReportSections) => {
-    setSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const sectionLabels: Record<keyof ReportSections, string> = {
-    patientInfo: 'Patient Information',
-    scanDetails: 'Scan Details',
-    prediction: 'Prediction Result',
-    probabilities: 'Class Probabilities',
-    volumetry: 'Hippocampal Volumetry',
-    features: 'Feature Analysis',
-    recommendations: 'Clinical Recommendations',
-  };
 
   const handleGeneratePDF = async () => {
     try {
@@ -148,52 +113,7 @@ export function ReportGenerator({
         </div>
       </div>
 
-      {/* Customization Options */}
-      <div className="border border-border rounded-lg">
-        <button
-          type="button"
-          onClick={() => setShowCustomization(!showCustomization)}
-          className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-          disabled={status === 'generating'}
-        >
-          <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Customize Report Sections</span>
-          </div>
-          {showCustomization ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
-
-        {showCustomization && (
-          <div className="p-3 pt-0 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-3">
-              Select which sections to include in the report
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(sections) as Array<keyof ReportSections>).map((key) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-muted/50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={sections[key]}
-                    onChange={() => toggleSection(key)}
-                    className="h-4 w-4 rounded border-border"
-                    disabled={status === 'generating'}
-                  />
-                  <span className="text-sm">{sectionLabels[key]}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Generate Buttons */}
+      {/* Generate Button */}
       <div className="flex items-center gap-3">
         <Button
           onClick={handleGeneratePDF}

@@ -362,10 +362,18 @@ export function BatchAnalysis({ scans, userId }: BatchAnalysisProps) {
                     )}
                     {item.status === 'completed' && (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-green-600">
-                          {item.result?.class_name}
+                        <span className={`text-xs ${
+                          item.result?.class_name === 'Mild Cognitive Impairment'
+                            ? 'text-orange-600'
+                            : 'text-green-600'
+                        }`}>
+                          {item.result?.class_name === 'Mild Cognitive Impairment' ? 'MCI' : 'Normal'}
                         </span>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className={`h-4 w-4 ${
+                          item.result?.class_name === 'Mild Cognitive Impairment'
+                            ? 'text-orange-600'
+                            : 'text-green-600'
+                        }`} />
                       </div>
                     )}
                     {item.status === 'error' && (

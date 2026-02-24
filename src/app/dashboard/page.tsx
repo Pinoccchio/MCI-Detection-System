@@ -108,9 +108,9 @@ async function AdminDashboard() {
         <StatCard
           title="Analyses Complete"
           value={analysisStats.total}
-          change={`${scanStats.completed} completed scans`}
+          change={`+${analysisStats.thisWeek} this week`}
           icon={Brain}
-          trend="neutral"
+          trend={analysisStats.thisWeek > 0 ? 'up' : 'neutral'}
         />
         <StatCard
           title="Reports Generated"

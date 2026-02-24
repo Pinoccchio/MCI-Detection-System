@@ -291,23 +291,25 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
             </div>
           )}
 
-          {/* Link to Original Analysis */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Original Analysis</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  View the original analysis result or generate a new report
-                </p>
+          {/* Link to Original Analysis - Only for clinicians/admins */}
+          {user.profile?.role !== 'researcher' && (
+            <div className="bg-card border border-border rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Original Analysis</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    View the original analysis result or generate a new report
+                  </p>
+                </div>
+                <Link href={`/dashboard/results/${analysis.id}`}>
+                  <Button>
+                    <Brain className="h-4 w-4 mr-2" />
+                    View Analysis
+                  </Button>
+                </Link>
               </div>
-              <Link href={`/dashboard/results/${analysis.id}`}>
-                <Button>
-                  <Brain className="h-4 w-4 mr-2" />
-                  View Analysis
-                </Button>
-              </Link>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
