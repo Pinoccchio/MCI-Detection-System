@@ -38,6 +38,9 @@ export interface OperationResult {
   data?: any;
 }
 
+// Default query limit to prevent memory overflow
+const DEFAULT_LIMIT = 50;
+
 // ============================================================================
 // LIST REPORTS
 // ============================================================================
@@ -53,6 +56,7 @@ export async function getReports(options?: {
 }): Promise<ReportsListResult> {
   try {
     const supabase = await createClient();
+    const limit = options?.limit ?? DEFAULT_LIMIT;
 
     let query = supabase
       .from('reports')
@@ -76,7 +80,8 @@ export async function getReports(options?: {
       `,
         { count: 'exact' }
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     // Filter by analysis
     if (options?.analysisId) {
@@ -88,15 +93,9 @@ export async function getReports(options?: {
       query = query.eq('report_type', options.reportType);
     }
 
-    // Apply pagination
-    if (options?.limit) {
-      query = query.limit(options.limit);
-    }
+    // Apply offset for pagination
     if (options?.offset) {
-      query = query.range(
-        options.offset,
-        options.offset + (options.limit || 10) - 1
-      );
+      query = query.range(options.offset, options.offset + limit - 1);
     }
 
     const { data, error, count } = await query;
@@ -413,8 +412,49 @@ export async function deleteReport(id: string): Promise<OperationResult> {
 
 /**
  * Get report statistics for dashboard
+ * Uses optimized RPC function for single-query aggregation
  */
 export async function getReportStats(): Promise<{
+  total: number;
+  thisMonth: number;
+  clinical: number;
+  research: number;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Use optimized RPC function
+    const { data, error } = await supabase.rpc('get_report_stats');
+
+    if (error) {
+      console.error('[Reports API] Stats RPC error:', error.message);
+      // Fallback to individual queries if RPC not available
+      return await getReportStatsFallback();
+    }
+
+    return {
+      total: data?.total ?? 0,
+      thisMonth: data?.this_month ?? 0,
+      clinical: data?.clinical ?? 0,
+      research: data?.research ?? 0,
+    };
+  } catch (error: any) {
+    console.error('[Reports API] Stats error:', error);
+    return {
+      total: 0,
+      thisMonth: 0,
+      clinical: 0,
+      research: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Fallback function for report stats (used if RPC not available)
+ */
+async function getReportStatsFallback(): Promise<{
   total: number;
   thisMonth: number;
   clinical: number;
@@ -458,7 +498,7 @@ export async function getReportStats(): Promise<{
       research: research || 0,
     };
   } catch (error: any) {
-    console.error('[Reports API] Stats error:', error);
+    console.error('[Reports API] Stats fallback error:', error);
     return {
       total: 0,
       thisMonth: 0,

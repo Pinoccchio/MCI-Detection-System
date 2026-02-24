@@ -30,6 +30,9 @@ export interface OperationResult {
   data?: any;
 }
 
+// Default query limit to prevent memory overflow
+const DEFAULT_LIMIT = 50;
+
 // ============================================================================
 // LIST PATIENTS
 // ============================================================================
@@ -44,11 +47,13 @@ export async function getPatients(options?: {
 }): Promise<PatientsListResult> {
   try {
     const supabase = await createClient();
+    const limit = options?.limit ?? DEFAULT_LIMIT;
 
     let query = supabase
       .from('patients')
       .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     // Apply search filter
     if (options?.search) {
@@ -57,12 +62,9 @@ export async function getPatients(options?: {
       );
     }
 
-    // Apply pagination
-    if (options?.limit) {
-      query = query.limit(options.limit);
-    }
+    // Apply offset for pagination
     if (options?.offset) {
-      query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+      query = query.range(options.offset, options.offset + limit - 1);
     }
 
     const { data, error, count } = await query;
@@ -363,8 +365,46 @@ export async function deletePatient(id: string): Promise<OperationResult> {
 
 /**
  * Get patient statistics for dashboard
+ * Uses optimized RPC function for single-query aggregation
  */
 export async function getPatientStats(): Promise<{
+  total: number;
+  thisMonth: number;
+  withScans: number;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Use optimized RPC function
+    const { data, error } = await supabase.rpc('get_patient_stats');
+
+    if (error) {
+      console.error('[Patients API] Stats RPC error:', error.message);
+      // Fallback to individual queries if RPC not available
+      return await getPatientStatsFallback();
+    }
+
+    return {
+      total: data?.total ?? 0,
+      thisMonth: data?.this_month ?? 0,
+      withScans: data?.with_scans ?? 0,
+    };
+  } catch (error: any) {
+    console.error('[Patients API] Stats error:', error);
+    return {
+      total: 0,
+      thisMonth: 0,
+      withScans: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Fallback function for patient stats (used if RPC not available)
+ */
+async function getPatientStatsFallback(): Promise<{
   total: number;
   thisMonth: number;
   withScans: number;
@@ -400,7 +440,7 @@ export async function getPatientStats(): Promise<{
       withScans: scanCounts?.length || 0,
     };
   } catch (error: any) {
-    console.error('[Patients API] Stats error:', error);
+    console.error('[Patients API] Stats fallback error:', error);
     return {
       total: 0,
       thisMonth: 0,

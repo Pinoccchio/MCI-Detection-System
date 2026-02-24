@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// Default query limit to prevent memory overflow
+const DEFAULT_LIMIT = 50;
+
 // GET - Retrieve analyses with optional filtering
 export async function GET(request: NextRequest) {
   try {
@@ -25,10 +28,13 @@ export async function GET(request: NextRequest) {
     const scanId = searchParams.get('scanId');
     const patientId = searchParams.get('patientId');
     const prediction = searchParams.get('prediction');
-    const limit = searchParams.get('limit');
+    const limitParam = searchParams.get('limit');
     const offset = searchParams.get('offset');
 
-    // Build query
+    // Parse limit with default
+    const limit = limitParam ? parseInt(limitParam, 10) : DEFAULT_LIMIT;
+
+    // Build query with default limit
     let query = supabase
       .from('analysis_results')
       .select(
@@ -47,7 +53,8 @@ export async function GET(request: NextRequest) {
       `,
         { count: 'exact' }
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     // Filter by scan
     if (scanId) {
@@ -64,14 +71,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('prediction', prediction);
     }
 
-    // Apply pagination
-    if (limit) {
-      query = query.limit(parseInt(limit, 10));
-    }
+    // Apply offset for pagination
     if (offset) {
       const offsetNum = parseInt(offset, 10);
-      const limitNum = limit ? parseInt(limit, 10) : 10;
-      query = query.range(offsetNum, offsetNum + limitNum - 1);
+      query = query.range(offsetNum, offsetNum + limit - 1);
     }
 
     const { data, error, count } = await query;

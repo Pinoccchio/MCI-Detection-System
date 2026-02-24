@@ -42,6 +42,9 @@ export interface OperationResult {
   data?: any;
 }
 
+// Default query limit to prevent memory overflow
+const DEFAULT_LIMIT = 50;
+
 // ============================================================================
 // LIST ANALYSES
 // ============================================================================
@@ -58,6 +61,7 @@ export async function getAnalyses(options?: {
 }): Promise<AnalysesListResult> {
   try {
     const supabase = await createClient();
+    const limit = options?.limit ?? DEFAULT_LIMIT;
 
     let query = supabase
       .from('analysis_results')
@@ -77,7 +81,8 @@ export async function getAnalyses(options?: {
       `,
         { count: 'exact' }
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     // Filter by scan
     if (options?.scanId) {
@@ -94,15 +99,9 @@ export async function getAnalyses(options?: {
       query = query.eq('prediction', options.prediction);
     }
 
-    // Apply pagination
-    if (options?.limit) {
-      query = query.limit(options.limit);
-    }
+    // Apply offset for pagination
     if (options?.offset) {
-      query = query.range(
-        options.offset,
-        options.offset + (options.limit || 10) - 1
-      );
+      query = query.range(options.offset, options.offset + limit - 1);
     }
 
     const { data, error, count } = await query;
@@ -280,8 +279,49 @@ export async function createAnalysis(
 
 /**
  * Get analysis statistics for dashboard
+ * Uses optimized RPC function for single-query aggregation (including AVG)
  */
 export async function getAnalysisStats(): Promise<{
+  total: number;
+  thisWeek: number;
+  mciDetected: number;
+  avgConfidence: number;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Use optimized RPC function that calculates AVG in SQL
+    const { data, error } = await supabase.rpc('get_analysis_stats');
+
+    if (error) {
+      console.error('[Analyses API] Stats RPC error:', error.message);
+      // Fallback to individual queries if RPC not available
+      return await getAnalysisStatsFallback();
+    }
+
+    return {
+      total: data?.total ?? 0,
+      thisWeek: data?.this_week ?? 0,
+      mciDetected: data?.mci_detected ?? 0,
+      avgConfidence: data?.avg_confidence ?? 0,
+    };
+  } catch (error: any) {
+    console.error('[Analyses API] Stats error:', error);
+    return {
+      total: 0,
+      thisWeek: 0,
+      mciDetected: 0,
+      avgConfidence: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Fallback function for analysis stats (used if RPC not available)
+ */
+async function getAnalysisStatsFallback(): Promise<{
   total: number;
   thisWeek: number;
   mciDetected: number;
@@ -311,10 +351,11 @@ export async function getAnalysisStats(): Promise<{
       .select('*', { count: 'exact', head: true })
       .eq('prediction', 'Mild Cognitive Impairment');
 
-    // Get average confidence
+    // Get average confidence - limit to prevent memory issues
     const { data: allAnalyses } = await supabase
       .from('analysis_results')
-      .select('confidence');
+      .select('confidence')
+      .limit(1000);
 
     const avgConfidence =
       allAnalyses && allAnalyses.length > 0
@@ -329,7 +370,7 @@ export async function getAnalysisStats(): Promise<{
       avgConfidence: Math.round(avgConfidence * 100) / 100,
     };
   } catch (error: any) {
-    console.error('[Analyses API] Stats error:', error);
+    console.error('[Analyses API] Stats fallback error:', error);
     return {
       total: 0,
       thisWeek: 0,

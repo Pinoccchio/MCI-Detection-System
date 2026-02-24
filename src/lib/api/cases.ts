@@ -7,6 +7,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 
+// Default query limit to prevent memory overflow
+const DEFAULT_LIMIT = 50;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -61,12 +64,14 @@ export async function getCasesWithSummary(options?: {
 }): Promise<CasesListResult> {
   try {
     const supabase = await createClient();
+    const limit = options?.limit ?? DEFAULT_LIMIT;
 
-    // Fetch patients
+    // Fetch patients with default limit
     let patientsQuery = supabase
       .from('patients')
       .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     // Apply search filter
     if (options?.search) {
@@ -216,13 +221,51 @@ export async function getCasesWithSummary(options?: {
 
 /**
  * Get case statistics for dashboard cards
+ * Uses optimized RPC function for single-query aggregation
  */
 export async function getCaseStats(): Promise<CaseStats> {
   try {
     const supabase = await createClient();
 
-    // Get all patients
-    const { data: patients } = await supabase.from('patients').select('id');
+    // Use optimized RPC function
+    const { data, error } = await supabase.rpc('get_case_stats');
+
+    if (error) {
+      console.error('[Cases API] Stats RPC error:', error.message);
+      // Fallback to individual queries if RPC not available
+      return await getCaseStatsFallback();
+    }
+
+    return {
+      active: data?.active ?? 0,
+      pendingReview: data?.pending_review ?? 0,
+      completed: data?.completed ?? 0,
+      mciDetected: data?.mci_detected ?? 0,
+    };
+  } catch (error: any) {
+    console.error('[Cases API] Stats error:', error);
+    return {
+      active: 0,
+      pendingReview: 0,
+      completed: 0,
+      mciDetected: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Fallback for case stats (used if RPC not available)
+ */
+async function getCaseStatsFallback(): Promise<CaseStats> {
+  try {
+    const supabase = await createClient();
+
+    // Get all patients (limited)
+    const { data: patients } = await supabase
+      .from('patients')
+      .select('id')
+      .limit(1000);
 
     if (!patients || patients.length === 0) {
       return {
@@ -299,7 +342,7 @@ export async function getCaseStats(): Promise<CaseStats> {
       mciDetected,
     };
   } catch (error: any) {
-    console.error('[Cases API] Stats error:', error);
+    console.error('[Cases API] Stats fallback error:', error);
     return {
       active: 0,
       pendingReview: 0,

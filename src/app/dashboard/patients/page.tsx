@@ -35,7 +35,9 @@ export default async function PatientsPage() {
         <div>
           <h1 className="text-3xl font-bold">Patients</h1>
           <p className="text-muted-foreground mt-1">
-            Manage patient records and medical information
+            {user.profile.role === 'admin'
+              ? 'Manage patient records and medical information'
+              : 'View patient records and medical information'}
           </p>
         </div>
       </div>

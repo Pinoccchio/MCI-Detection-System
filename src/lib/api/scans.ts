@@ -34,6 +34,9 @@ export interface OperationResult {
 // LIST SCANS
 // ============================================================================
 
+// Default query limit to prevent memory overflow
+const DEFAULT_LIMIT = 50;
+
 /**
  * Get list of MRI scans with optional filtering
  */
@@ -45,11 +48,13 @@ export async function getScans(options?: {
 }): Promise<ScansListResult> {
   try {
     const supabase = await createClient();
+    const limit = options?.limit ?? DEFAULT_LIMIT;
 
     let query = supabase
       .from('mri_scans')
       .select('*, patients(patient_id, full_name)', { count: 'exact' })
-      .order('scan_date', { ascending: false });
+      .order('scan_date', { ascending: false })
+      .limit(limit);
 
     // Filter by patient
     if (options?.patientId) {
@@ -61,15 +66,9 @@ export async function getScans(options?: {
       query = query.eq('status', options.status);
     }
 
-    // Apply pagination
-    if (options?.limit) {
-      query = query.limit(options.limit);
-    }
+    // Apply offset for pagination
     if (options?.offset) {
-      query = query.range(
-        options.offset,
-        options.offset + (options.limit || 10) - 1
-      );
+      query = query.range(options.offset, options.offset + limit - 1);
     }
 
     const { data, error, count } = await query;
@@ -347,8 +346,49 @@ export async function deleteScan(id: string): Promise<OperationResult> {
 
 /**
  * Get scan statistics for dashboard
+ * Uses optimized RPC function for single-query aggregation
  */
 export async function getScanStats(): Promise<{
+  total: number;
+  thisWeek: number;
+  completed: number;
+  pending: number;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Use optimized RPC function
+    const { data, error } = await supabase.rpc('get_scan_stats');
+
+    if (error) {
+      console.error('[Scans API] Stats RPC error:', error.message);
+      // Fallback to individual queries if RPC not available
+      return await getScanStatsFallback();
+    }
+
+    return {
+      total: data?.total ?? 0,
+      thisWeek: data?.this_week ?? 0,
+      completed: data?.completed ?? 0,
+      pending: data?.pending ?? 0,
+    };
+  } catch (error: any) {
+    console.error('[Scans API] Stats error:', error);
+    return {
+      total: 0,
+      thisWeek: 0,
+      completed: 0,
+      pending: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Fallback function for scan stats (used if RPC not available)
+ */
+async function getScanStatsFallback(): Promise<{
   total: number;
   thisWeek: number;
   completed: number;
@@ -391,7 +431,7 @@ export async function getScanStats(): Promise<{
       pending: pending || 0,
     };
   } catch (error: any) {
-    console.error('[Scans API] Stats error:', error);
+    console.error('[Scans API] Stats fallback error:', error);
     return {
       total: 0,
       thisWeek: 0,

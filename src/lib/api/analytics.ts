@@ -231,8 +231,40 @@ export async function getConfusionMatrix(): Promise<ConfusionMatrix> {
 
 /**
  * Get distribution of predictions by class
+ * Uses optimized RPC function for single-query aggregation
  */
 export async function getClassDistribution(): Promise<ClassDistribution> {
+  try {
+    const supabase = await createClient();
+
+    // Use optimized RPC function
+    const { data, error } = await supabase.rpc('get_class_distribution');
+
+    if (error) {
+      console.error('Error in getClassDistribution RPC:', error);
+      // Fallback to individual queries
+      return await getClassDistributionFallback();
+    }
+
+    return {
+      cognitivelyNormal: data?.cognitively_normal ?? 0,
+      mildCognitiveImpairment: data?.mild_cognitive_impairment ?? 0,
+      total: data?.total ?? 0,
+    };
+  } catch (error: any) {
+    console.error('Error in getClassDistribution:', error);
+    return {
+      cognitivelyNormal: 0,
+      mildCognitiveImpairment: 0,
+      total: 0,
+    };
+  }
+}
+
+/**
+ * Fallback for class distribution (used if RPC not available)
+ */
+async function getClassDistributionFallback(): Promise<ClassDistribution> {
   try {
     const supabase = await createClient();
 
@@ -256,7 +288,7 @@ export async function getClassDistribution(): Promise<ClassDistribution> {
       total: mci + normal,
     };
   } catch (error: any) {
-    console.error('Error in getClassDistribution:', error);
+    console.error('Error in getClassDistributionFallback:', error);
     return {
       cognitivelyNormal: 0,
       mildCognitiveImpairment: 0,
@@ -271,14 +303,50 @@ export async function getClassDistribution(): Promise<ClassDistribution> {
 
 /**
  * Get distribution of prediction confidence levels
+ * Uses optimized RPC function for server-side aggregation
  */
 export async function getConfidenceDistribution(): Promise<ConfidenceDistribution> {
   try {
     const supabase = await createClient();
 
+    // Use optimized RPC function
+    const { data, error } = await supabase.rpc('get_confidence_distribution');
+
+    if (error) {
+      console.error('Error in getConfidenceDistribution RPC:', error);
+      // Fallback to client-side calculation
+      return await getConfidenceDistributionFallback();
+    }
+
+    if (!data || !Array.isArray(data)) {
+      return { ranges: [] };
+    }
+
+    return {
+      ranges: data.map((r: { range: string; count: number; percentage: number }) => ({
+        range: r.range,
+        count: r.count,
+        percentage: r.percentage,
+      })),
+    };
+  } catch (error: any) {
+    console.error('Error in getConfidenceDistribution:', error);
+    return { ranges: [] };
+  }
+}
+
+/**
+ * Fallback for confidence distribution (used if RPC not available)
+ */
+async function getConfidenceDistributionFallback(): Promise<ConfidenceDistribution> {
+  try {
+    const supabase = await createClient();
+
+    // Limit to prevent memory issues
     const { data: analyses, error } = await supabase
       .from('analysis_results')
-      .select('confidence');
+      .select('confidence')
+      .limit(1000);
 
     if (error || !analyses) {
       return { ranges: [] };
@@ -314,7 +382,7 @@ export async function getConfidenceDistribution(): Promise<ConfidenceDistributio
       })),
     };
   } catch (error: any) {
-    console.error('Error in getConfidenceDistribution:', error);
+    console.error('Error in getConfidenceDistributionFallback:', error);
     return { ranges: [] };
   }
 }
