@@ -691,32 +691,41 @@ export async function getROCCurveData(): Promise<ROCData> {
 /**
  * Generate an estimated ROC curve given a target AUC
  * Creates a realistic-looking curve that achieves the specified AUC
+ *
+ * Uses the parametric formula for ROC curves based on binormal model:
+ * TPR = Phi(a + b * Phi^-1(FPR))
+ *
+ * For simplicity, we use a power-law approximation:
+ * TPR = 1 - (1 - FPR)^k where k is chosen to achieve target AUC
+ *
+ * For this model, AUC = 1 / (1 + k), so k = (1 - AUC) / AUC
  */
 function generateEstimatedROC(targetAUC: number): ROCData {
-  // Generate points that create a smooth curve with the target AUC
-  // Using a simple model where TPR = FPR^(1-AUC) approximately achieves desired AUC
   const points: { fpr: number; tpr: number; threshold: number }[] = [];
 
-  // Parameter that controls curve shape (higher = more curved = higher AUC)
-  const curvature = Math.log(1 - targetAUC + 0.01) / Math.log(0.5);
+  // Clamp AUC to valid range (0.5 to 0.99 to avoid extreme values)
+  const clampedAUC = Math.max(0.5, Math.min(0.99, targetAUC));
 
-  const fprValues = [0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+  // Calculate the exponent k for the power-law model
+  // Using the relationship: for TPR = 1 - (1-FPR)^k, the AUC ≈ k / (k + 1)
+  // Solving for k: k = AUC / (1 - AUC)
+  const k = clampedAUC / (1 - clampedAUC);
+
+  // Generate more points for a smoother curve
+  const fprValues = [0, 0.01, 0.02, 0.05, 0.08, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0];
 
   fprValues.forEach((fpr, index) => {
-    // TPR formula that creates realistic ROC curve shape
     let tpr: number;
     if (fpr === 0) {
       tpr = 0;
     } else if (fpr === 1) {
       tpr = 1;
     } else {
-      // Use power function to create curved shape
-      // Higher AUC = curve bows more toward top-left
-      tpr = Math.pow(fpr, 1 / (targetAUC * 2));
-      // Ensure TPR >= FPR (above diagonal)
-      tpr = Math.max(tpr, fpr);
-      // Clamp to valid range
-      tpr = Math.min(1, tpr);
+      // Power-law model: TPR = 1 - (1 - FPR)^k
+      // This produces a concave curve that bows toward top-left
+      tpr = 1 - Math.pow(1 - fpr, k);
+      // Ensure TPR is in valid range
+      tpr = Math.max(0, Math.min(1, tpr));
     }
 
     const threshold = 1 - (index / (fprValues.length - 1));

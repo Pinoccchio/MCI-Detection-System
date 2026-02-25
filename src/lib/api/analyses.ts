@@ -225,19 +225,9 @@ export async function createAnalysis(
       };
     }
 
-    // Check user role (admins and researchers can create analyses)
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || !['admin', 'researcher'].includes(profile.role)) {
-      return {
-        success: false,
-        error: 'Only administrators and researchers can create analyses',
-      };
-    }
+    // Note: Role check removed - RLS policy "Admins and researchers can create analyses"
+    // already enforces this constraint. Removing the redundant query prevents
+    // the slow RLS recursion issue for non-admin users.
 
     // Create analysis record
     const { data, error } = await supabase
