@@ -78,6 +78,29 @@ export async function getPatients(options?: {
       };
     }
 
+    // Fetch user profiles separately for each patient (creator)
+    if (data && data.length > 0) {
+      const userIds = [...new Set(data.map(p => p.created_by).filter(Boolean))];
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, role')
+          .in('id', userIds);
+
+        // Map profiles to patients
+        const patientsWithProfiles = data.map(patient => ({
+          ...patient,
+          creator: profiles?.find(p => p.id === patient.created_by) || null
+        }));
+
+        return {
+          patients: patientsWithProfiles,
+          total: count || 0,
+        };
+      }
+    }
+
     return {
       patients: data || [],
       total: count || 0,

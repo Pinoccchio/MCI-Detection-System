@@ -82,6 +82,29 @@ export async function getScans(options?: {
       };
     }
 
+    // Fetch user profiles separately for each scan (uploader)
+    if (data && data.length > 0) {
+      const userIds = [...new Set(data.map(s => s.uploaded_by).filter(Boolean))];
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, role')
+          .in('id', userIds);
+
+        // Map profiles to scans
+        const scansWithProfiles = data.map(scan => ({
+          ...scan,
+          uploader: profiles?.find(p => p.id === scan.uploaded_by) || null
+        }));
+
+        return {
+          scans: scansWithProfiles,
+          total: count || 0,
+        };
+      }
+    }
+
     return {
       scans: data || [],
       total: count || 0,
@@ -156,21 +179,7 @@ export async function createScan(input: CreateMRIScanInput): Promise<OperationRe
       };
     }
 
-    // Check user role (only admins can create scans)
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
-      return {
-        success: false,
-        error: 'Only administrators can upload scans',
-      };
-    }
-
-    // Create scan record
+    // Create scan record (RLS policies enforce admin-only access)
     const { data, error } = await supabase
       .from('mri_scans')
       .insert({
@@ -231,21 +240,7 @@ export async function updateScan(
       };
     }
 
-    // Check user role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
-      return {
-        success: false,
-        error: 'Only administrators can update scans',
-      };
-    }
-
-    // Update scan
+    // Update scan (RLS policies enforce admin-only access)
     const { data, error } = await supabase
       .from('mri_scans')
       .update(updates)
@@ -301,20 +296,7 @@ export async function deleteScan(id: string): Promise<OperationResult> {
       };
     }
 
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
-      return {
-        success: false,
-        error: 'Only administrators can delete scans',
-      };
-    }
-
-    // Delete scan
+    // Delete scan (RLS policies enforce admin-only access)
     const { error } = await supabase.from('mri_scans').delete().eq('id', id);
 
     if (error) {

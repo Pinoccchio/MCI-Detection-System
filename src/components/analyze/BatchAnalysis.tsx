@@ -75,21 +75,15 @@ export function BatchAnalysis({ scans, userId }: BatchAnalysisProps) {
         throw new Error('Failed to get scan file URL');
       }
 
-      // Download file
-      const fileResponse = await fetch(urlResult.url);
-      if (!fileResponse.ok) {
-        throw new Error('Failed to download scan file');
-      }
-
-      const fileBlob = await fileResponse.blob();
-
-      // Send to ML backend
+      // Send signed URL to ML backend (backend downloads directly - much faster!)
       const formData = new FormData();
       const originalFilename = scan.file_path.split('/').pop() || 'scan.nii';
-      formData.append('file', fileBlob, originalFilename);
+      formData.append('file_url', urlResult.url);
+      formData.append('filename', originalFilename);
+      formData.append('generate_gradcam', 'true');
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const predictResponse = await fetch(`${apiUrl}/api/v1/predict`, {
+      const predictResponse = await fetch(`${apiUrl}/api/v1/predict-from-url`, {
         method: 'POST',
         body: formData,
       });

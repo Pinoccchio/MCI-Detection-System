@@ -71,29 +71,22 @@ export function AnalyzeInterface({ scans, preSelectedScan, userId, userRole }: A
 
       setProgress(20);
 
-      // Step 2: Download the file
-      setStatus('fetching-file');
-      const fileResponse = await fetch(urlResult.url);
-      if (!fileResponse.ok) {
-        throw new Error('Failed to download scan file');
-      }
-
-      const fileBlob = await fileResponse.blob();
-      setProgress(40);
-
-      // Step 3: Send to FastAPI backend
+      // Step 2: Send signed URL to ML backend (backend downloads directly - much faster!)
       setStatus('analyzing');
-      const formData = new FormData();
-
-      // Use the original filename from the scan's file_path
       const originalFilename = selectedScan.file_path.split('/').pop() || 'scan.nii';
-      formData.append('file', fileBlob, originalFilename);
+
+      const formData = new FormData();
+      formData.append('file_url', urlResult.url);
+      formData.append('filename', originalFilename);
+      formData.append('generate_gradcam', 'true');
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const predictResponse = await fetch(`${apiUrl}/api/v1/predict`, {
+      const predictResponse = await fetch(`${apiUrl}/api/v1/predict-from-url`, {
         method: 'POST',
         body: formData,
       });
+
+      setProgress(60);
 
       if (!predictResponse.ok) {
         const errorData = await predictResponse.json();

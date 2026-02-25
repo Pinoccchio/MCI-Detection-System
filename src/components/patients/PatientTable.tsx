@@ -218,6 +218,9 @@ export function PatientTable({ patients, onDelete, userRole = 'admin' }: Patient
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Registered
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Registered By
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
@@ -226,7 +229,7 @@ export function PatientTable({ patients, onDelete, userRole = 'admin' }: Patient
             <tbody className="bg-card divide-y divide-border">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     {searchTerm ? 'No patients found matching your search' : 'No patients yet'}
                   </td>
                 </tr>
@@ -263,6 +266,9 @@ export function PatientTable({ patients, onDelete, userRole = 'admin' }: Patient
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatDate(patient.created_at)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {(patient as any).creator?.full_name || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-1">

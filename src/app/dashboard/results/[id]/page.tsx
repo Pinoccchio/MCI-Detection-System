@@ -111,6 +111,21 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
                 </div>
               </div>
 
+              {(analysis as any).analyzer_profile && (
+                <div className="flex items-start gap-3">
+                  <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Analyzed By</p>
+                    <p className="font-medium">{(analysis as any).analyzer_profile.full_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {(analysis as any).analyzer_profile.role}
+                      {(analysis as any).analyzer_profile.institution &&
+                        ` • ${(analysis as any).analyzer_profile.institution}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-start gap-3">
                 <Activity className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>

@@ -178,6 +178,9 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Scan Date
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Uploaded By
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
@@ -186,7 +189,7 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
             <tbody className="bg-card divide-y divide-border">
               {filteredScans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     {searchTerm ? 'No scans found matching your search' : 'No scans yet'}
                   </td>
                 </tr>
@@ -216,6 +219,9 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatDateTime(scan.scan_date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {(scan as any).uploader?.full_name || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-1">

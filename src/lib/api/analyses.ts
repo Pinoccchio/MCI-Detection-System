@@ -116,6 +116,29 @@ export async function getAnalyses(options?: {
       };
     }
 
+    // Fetch user profiles separately for each analysis (analyzer)
+    if (data && data.length > 0) {
+      const userIds = [...new Set(data.map(a => a.analyzed_by).filter(Boolean))];
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, role')
+          .in('id', userIds);
+
+        // Map profiles to analyses
+        const analysesWithProfiles = data.map(analysis => ({
+          ...analysis,
+          analyzer: profiles?.find(p => p.id === analysis.analyzed_by) || null
+        }));
+
+        return {
+          analyses: analysesWithProfiles,
+          total: count || 0,
+        };
+      }
+    }
+
     return {
       analyses: data || [],
       total: count || 0,
@@ -179,12 +202,12 @@ export async function getAnalysisById(id: string): Promise<{
     if (data && data.analyzed_by) {
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('id, full_name, role')
+        .select('id, full_name, role, institution')
         .eq('id', data.analyzed_by)
         .single();
 
       if (profile) {
-        (data as any).user_profiles = profile;
+        (data as any).analyzer_profile = profile;
       }
     }
 

@@ -28,6 +28,7 @@ export interface FormattedAnalysis {
   prob_normal: number;
   prob_mci: number;
   model_version: string;
+  analyzed_by: string;
   analyzed_at: string;
   left_hippocampus?: number;
   right_hippocampus?: number;
@@ -120,6 +121,7 @@ export function formatAnalysisForExport(analysis: any): FormattedAnalysis {
     prob_normal: probabilities['Cognitively Normal'] || 0,
     prob_mci: probabilities['Mild Cognitive Impairment'] || 0,
     model_version: analysis.model_version,
+    analyzed_by: analysis.analyzer?.full_name || '',
     analyzed_at: analysis.created_at,
     left_hippocampus: volumetry.left_hippocampus,
     right_hippocampus: volumetry.right_hippocampus,
@@ -144,6 +146,7 @@ export const ANALYSIS_EXPORT_COLUMNS: ExportColumn[] = [
   { key: 'prob_normal', header: 'P(Normal)', formatter: formatProbability },
   { key: 'prob_mci', header: 'P(MCI)', formatter: formatProbability },
   { key: 'model_version', header: 'Model Version' },
+  { key: 'analyzed_by', header: 'Analyzed By' },
   { key: 'analyzed_at', header: 'Analyzed At', formatter: formatDateTime },
   { key: 'left_hippocampus', header: 'Left Hippocampus (mm³)', formatter: formatVolume },
   { key: 'right_hippocampus', header: 'Right Hippocampus (mm³)', formatter: formatVolume },

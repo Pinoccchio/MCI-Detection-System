@@ -63,7 +63,7 @@ export function ResultsTable({ analyses, initialPatientFilter, initialPatientNam
 
   // Export functions
   const exportToCSV = useCallback(() => {
-    const headers = ['Patient Name', 'Patient ID', 'Scan Type', 'Prediction', 'Confidence', 'Model', 'Analyzed Date'];
+    const headers = ['Patient Name', 'Patient ID', 'Scan Type', 'Prediction', 'Confidence', 'Model', 'Analyzed By', 'Analyzed Date'];
     const rows = filteredAnalyses.map((analysis) => [
       analysis.mri_scans?.patients?.full_name || '',
       analysis.mri_scans?.patients?.patient_id || '',
@@ -71,6 +71,7 @@ export function ResultsTable({ analyses, initialPatientFilter, initialPatientNam
       analysis.prediction,
       (analysis.confidence * 100).toFixed(2) + '%',
       analysis.model_version,
+      analysis.analyzer?.full_name || '',
       new Date(analysis.created_at).toISOString(),
     ]);
 
@@ -101,6 +102,7 @@ export function ResultsTable({ analyses, initialPatientFilter, initialPatientNam
       probabilities: analysis.probabilities,
       volumetry: analysis.volumetry,
       model_version: analysis.model_version,
+      analyzed_by: analysis.analyzer?.full_name || null,
       analyzed_at: analysis.created_at,
     }));
 
@@ -193,6 +195,9 @@ export function ResultsTable({ analyses, initialPatientFilter, initialPatientNam
                   Model
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Analyzed By
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Analyzed
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -203,7 +208,7 @@ export function ResultsTable({ analyses, initialPatientFilter, initialPatientNam
             <tbody className="bg-card divide-y divide-border">
               {filteredAnalyses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     {searchTerm || filterPrediction !== 'all'
                       ? 'No results match your search criteria'
                       : 'No analysis results yet'}
@@ -265,6 +270,9 @@ export function ResultsTable({ analyses, initialPatientFilter, initialPatientNam
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {analysis.model_version}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {analysis.analyzer?.full_name || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatDateTime(analysis.created_at)}

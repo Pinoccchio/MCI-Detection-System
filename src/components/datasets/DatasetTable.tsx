@@ -268,13 +268,14 @@ export function DatasetTable({ analyses }: DatasetTableProps) {
                 <th className="p-3 text-left font-medium">Scan Type</th>
                 <th className="p-3 text-left font-medium">Prediction</th>
                 <th className="p-3 text-left font-medium">Confidence</th>
+                <th className="p-3 text-left font-medium">Analyzed By</th>
                 <th className="p-3 text-left font-medium">Analyzed At</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
                     No data matches your filters
                   </td>
                 </tr>
@@ -328,6 +329,9 @@ export function DatasetTable({ analyses }: DatasetTableProps) {
                         <span className="font-mono">
                           {(analysis.confidence * 100).toFixed(1)}%
                         </span>
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {analysis.analyzer?.full_name || '—'}
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {formatDateTime(analysis.created_at)}

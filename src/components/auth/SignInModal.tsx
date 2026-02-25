@@ -18,19 +18,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 
 interface SignInModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSwitchToSignUp: () => void;
+  onForgotPassword: () => void;
 }
 
 export function SignInModal({
   open,
   onOpenChange,
   onSwitchToSignUp,
+  onForgotPassword,
 }: SignInModalProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +47,6 @@ export function SignInModal({
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: false,
     },
   });
 
@@ -151,14 +151,11 @@ export function SignInModal({
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <Checkbox
-                label="Remember me"
-                {...register("rememberMe")}
-              />
+            {/* Forgot Password */}
+            <div className="flex justify-end">
               <button
                 type="button"
+                onClick={onForgotPassword}
                 className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 Forgot password?
