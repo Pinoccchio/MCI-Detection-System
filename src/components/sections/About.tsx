@@ -7,17 +7,17 @@ import { Card, CardContent } from "@/components/ui/card";
 const stats = [
   {
     icon: Target,
-    value: "94.2%",
+    value: "80.8%",
     label: "Classification Accuracy",
-    description: "Validated on hippocampal MRI data",
+    description: "Validated on clinical dataset",
     gradient: "from-blue-600 to-cyan-600",
     bgGradient: "from-blue-500/10 to-cyan-500/10",
   },
   {
     icon: TrendingUp,
-    value: "89.7%",
-    label: "Sensitivity Rate",
-    description: "Early MCI detection capability",
+    value: "86.7%",
+    label: "MCI Sensitivity",
+    description: "High MCI detection rate",
     gradient: "from-purple-600 to-pink-600",
     bgGradient: "from-purple-500/10 to-pink-500/10",
   },
@@ -31,9 +31,9 @@ const stats = [
   },
   {
     icon: Shield,
-    value: "HIPAA",
-    label: "Compliant Design",
-    description: "Secure patient data handling",
+    value: "0.88",
+    label: "ROC AUC",
+    description: "Excellent discrimination",
     gradient: "from-amber-600 to-orange-600",
     bgGradient: "from-amber-500/10 to-orange-500/10",
   },
@@ -65,7 +65,7 @@ export function About() {
               About MCI Detection System
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Advancing early Alzheimer's detection through AI-powered hippocampal analysis
+              Advancing early Alzheimer's detection through ML-powered hippocampal analysis
             </p>
           </motion.div>
         </div>
@@ -84,10 +84,10 @@ export function About() {
                 Our Mission
               </h3>
               <p className="text-muted-foreground leading-relaxed text-base mb-4">
-                The MCI Detection System is a cutting-edge medical imaging platform designed to support early detection of Mild Cognitive Impairment (MCI) through advanced deep learning analysis of hippocampal structures in MRI scans.
+                The MCI Detection System is a cutting-edge medical imaging platform designed to support early detection of Mild Cognitive Impairment (MCI) through advanced AI analysis of hippocampal structures in MRI scans.
               </p>
               <p className="text-muted-foreground leading-relaxed text-base">
-                By leveraging a custom 2D Convolutional Neural Network trained on hippocampal-segmented masks, our system provides radiologists, clinicians, and researchers with powerful diagnostic insights, Grad-CAM visualizations, and volumetric analysis to aid in clinical decision-making and early intervention strategies.
+                By leveraging a feature-based machine learning model that extracts 26 hippocampal features from segmented masks, our system provides radiologists, clinicians, and researchers with powerful diagnostic insights, visualizations, and volumetric analysis to aid in clinical decision-making and early intervention strategies.
               </p>
             </CardContent>
           </Card>
@@ -152,13 +152,13 @@ export function About() {
                   <li className="flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      <span className="font-semibold text-foreground">Custom 2D CNN Architecture:</span> Specifically designed for hippocampal mask analysis
+                      <span className="font-semibold text-foreground">26 Hippocampal Features:</span> Volumetric, morphological, shape, intensity, and spatial analysis
                     </p>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      <span className="font-semibold text-foreground">Grad-CAM Visualization:</span> Transparent AI explanations highlighting critical features
+                      <span className="font-semibold text-foreground">Feature Importance:</span> Transparent ML explanations highlighting critical diagnostic factors
                     </p>
                   </li>
                   <li className="flex items-start gap-3">
@@ -170,7 +170,7 @@ export function About() {
                   <li className="flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      <span className="font-semibold text-foreground">DICOM Support:</span> Seamless integration with standard medical imaging workflows
+                      <span className="font-semibold text-foreground">NIfTI Support:</span> Seamless integration with standard neuroimaging workflows
                     </p>
                   </li>
                 </ul>
@@ -205,7 +205,7 @@ export function About() {
                   <li className="flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2" />
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      <span className="font-semibold text-foreground">Decision Support:</span> Augment clinical expertise with AI-powered insights
+                      <span className="font-semibold text-foreground">Decision Support:</span> Augment clinical expertise with ML-powered insights
                     </p>
                   </li>
                   <li className="flex items-start gap-3">

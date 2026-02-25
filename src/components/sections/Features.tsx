@@ -23,17 +23,17 @@ const features = [
   },
   {
     icon: Brain,
-    title: "CNN-Powered Classification",
+    title: "ML-Powered Classification",
     description:
-      "Custom 2D Convolutional Neural Network trained to distinguish between Cognitively Normal (CN) and Mild Cognitive Impairment (MCI) with exceptional accuracy.",
+      "Advanced ML model extracts 26 hippocampal features to distinguish between Cognitively Normal (CN) and Mild Cognitive Impairment (MCI) with high accuracy.",
     gradient: "from-purple-500/10 to-pink-500/10",
     iconColor: "text-purple-600",
   },
   {
     icon: Eye,
-    title: "Grad-CAM Visualization",
+    title: "Feature Importance Analysis",
     description:
-      "Interactive heatmap overlays highlight critical hippocampal features that influence classification decisions, providing transparent AI explanations.",
+      "Visual analysis shows which hippocampal features (volume, morphology, spatial patterns) most influence classification decisions, providing transparent ML explanations.",
     gradient: "from-amber-500/10 to-orange-500/10",
     iconColor: "text-amber-600",
   },
@@ -49,7 +49,7 @@ const features = [
     icon: FileText,
     title: "PDF Report Generation",
     description:
-      "Comprehensive clinical reports with classification results, probability scores, Grad-CAM visualizations, and volumetry data for documentation.",
+      "Comprehensive clinical reports with classification results, probability scores, feature analysis, and volumetry data for documentation.",
     gradient: "from-rose-500/10 to-red-500/10",
     iconColor: "text-rose-600",
   },
@@ -136,10 +136,10 @@ export function Features() {
             transition={{ duration: 0.8, type: "spring", stiffness: 100, damping: 15 }}
           >
             <h2 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl text-foreground mb-4">
-              Comprehensive AI-Powered Analysis
+              Comprehensive ML-Powered Analysis
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              State-of-the-art deep learning technology combined with clinical
+              State-of-the-art machine learning technology combined with clinical
               expertise to deliver accurate, interpretable diagnostic support.
             </p>
           </motion.div>
@@ -227,26 +227,6 @@ export function Features() {
           })}
         </motion.div>
 
-        {/* Bottom CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.3, type: "spring", stiffness: 100 }}
-          className="text-center mt-16"
-        >
-          <p className="text-muted-foreground mb-4">
-            Ready to experience the future of neuroimaging diagnostics?
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-shadow"
-          >
-            Schedule a Demo
-            <span className="text-lg">→</span>
-          </motion.button>
-        </motion.div>
       </div>
     </section>
   );

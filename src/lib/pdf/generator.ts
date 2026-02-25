@@ -478,7 +478,7 @@ export function generateReportHTML(data: ReportData): string {
   <!-- Footer -->
   <div class="footer">
     <div>Report Generated: ${formatDateTime(reportDate)}</div>
-    <div>MCI Detection System v1.0 | Powered by Random Forest ML Model (87-91% Accuracy)</div>
+    <div>MCI Detection System v1.0 | Powered by Gradient Boosting ML Model (~81% Accuracy)</div>
   </div>
 </body>
 </html>

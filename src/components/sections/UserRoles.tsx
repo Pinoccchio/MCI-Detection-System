@@ -16,7 +16,7 @@ const roles = [
     bgGradient: "from-blue-500/10 to-cyan-500/10",
     capabilities: [
       "Patient MRI data management and analysis",
-      "CNN model inference and result review",
+      "ML model inference and result review",
       "Manual hippocampal tracing and slice selection",
       "PDF report generation and export",
       "User management and access control",
@@ -34,7 +34,7 @@ const roles = [
     capabilities: [
       "Patient case review and analysis results",
       "Classification results and probability scores",
-      "Grad-CAM visualization review",
+      "Feature importance visualization review",
       "Hippocampal volumetry data access",
       "PDF report viewing and download",
       "Patient history and case management",
@@ -230,31 +230,6 @@ export function UserRoles() {
           })}
         </div>
 
-        {/* Bottom CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-center mt-16"
-        >
-          <div className="inline-block bg-gradient-to-r from-accent/10 to-primary/10 rounded-2xl p-8 border border-border">
-            <p className="text-lg font-heading font-semibold text-foreground mb-2">
-              Need a Custom Role Configuration?
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              We can tailor access levels and capabilities to match your
-              institution's specific workflows.
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-shadow"
-            >
-              Contact Us
-            </motion.button>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

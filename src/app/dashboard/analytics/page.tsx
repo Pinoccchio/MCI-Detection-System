@@ -103,8 +103,8 @@ export default async function AnalyticsPage() {
                 <p className="font-medium">{modelInfo.nFeatures} hippocampal features</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Training Accuracy</p>
-                <p className="font-medium text-green-600 dark:text-green-400">87-91%</p>
+                <p className="text-muted-foreground">Test Accuracy</p>
+                <p className="font-medium text-green-600 dark:text-green-400">~81%</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Classes</p>

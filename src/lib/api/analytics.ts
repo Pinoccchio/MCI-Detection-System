@@ -184,7 +184,7 @@ export async function getModelMetrics(): Promise<ModelMetrics> {
  * Calculate confusion matrix for model predictions
  *
  * NOTE: Without ground truth labels, we estimate performance based on model characteristics.
- * We use the model's reported training accuracy (87-91%) as a baseline for realistic metrics.
+ * We use the model's actual test accuracy (~81%) as a baseline for realistic metrics.
  * This provides meaningful analytics without actual ground truth data.
  *
  * In production with ground truth labels, replace this with actual comparison.
@@ -215,9 +215,8 @@ export async function getConfusionMatrix(): Promise<ConfusionMatrix> {
 
     const total = mciCount + normalCount;
 
-    // Use realistic estimated accuracy based on model's training accuracy (87-91%)
-    // We use 89% as a middle estimate
-    const estimatedAccuracy = 0.89;
+    // Use realistic estimated accuracy based on model's actual test accuracy (~81%)
+    const estimatedAccuracy = 0.81;
     const estimatedErrorRate = 1 - estimatedAccuracy;
 
     // Distribute errors proportionally between classes
@@ -647,7 +646,7 @@ export interface ROCData {
  *
  * NOTE: Without ground truth labels, we cannot calculate a true ROC curve.
  * Instead, we generate an estimated ROC curve based on:
- * - The model's stated training accuracy (87-91%, we use 89%)
+ * - The model's actual test accuracy (~81%) and ROC AUC (0.88)
  * - The distribution of confidence scores in predictions
  *
  * This provides a meaningful visualization while clearly representing
@@ -662,8 +661,8 @@ export async function getROCCurveData(): Promise<ROCData> {
       .select('prediction, confidence');
 
     if (error || !analyses || analyses.length < 2) {
-      // Return estimated ROC curve based on model's training accuracy
-      return generateEstimatedROC(0.89);
+      // Return estimated ROC curve based on model's actual ROC AUC
+      return generateEstimatedROC(0.88);
     }
 
     // Calculate average confidence across all predictions
@@ -673,10 +672,10 @@ export async function getROCCurveData(): Promise<ROCData> {
     const mciCount = analyses.filter(a => a.prediction === DB_PREDICTIONS.MCI).length;
     const normalCount = analyses.filter(a => a.prediction === DB_PREDICTIONS.NORMAL).length;
 
-    // Estimate model performance based on training accuracy and confidence
+    // Estimate model performance based on actual test performance and confidence
     // Higher average confidence suggests better discrimination
-    // Base AUC on model's stated accuracy range (87-91%)
-    const baseAUC = 0.89; // Middle of stated 87-91% accuracy
+    // Base AUC on model's actual ROC AUC (0.88)
+    const baseAUC = 0.88; // Actual ROC AUC from test evaluation
     const confidenceBonus = (avgConfidence - 0.5) * 0.1; // Small bonus for high confidence
     const estimatedAUC = Math.min(0.98, Math.max(0.70, baseAUC + confidenceBonus));
 

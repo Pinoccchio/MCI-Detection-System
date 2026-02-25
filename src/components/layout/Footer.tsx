@@ -31,9 +31,9 @@ export function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="py-12 md:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
             {/* Brand Column */}
-            <div className="lg:col-span-4">
+            <div>
               <Link href="/" className="flex items-center gap-3 group mb-4">
                 <Image
                   src="/logo.png"
@@ -82,7 +82,7 @@ export function Footer() {
             </div>
 
             {/* Links Columns */}
-            <div className="lg:col-span-2">
+            <div>
               <h4 className="font-heading font-semibold text-sm text-foreground mb-4 uppercase tracking-wide">
                 Product
               </h4>
@@ -100,7 +100,7 @@ export function Footer() {
               </ul>
             </div>
 
-            <div className="lg:col-span-2">
+            <div>
               <h4 className="font-heading font-semibold text-sm text-foreground mb-4 uppercase tracking-wide">
                 Company
               </h4>
@@ -118,7 +118,7 @@ export function Footer() {
               </ul>
             </div>
 
-            <div className="lg:col-span-2">
+            <div>
               <h4 className="font-heading font-semibold text-sm text-foreground mb-4 uppercase tracking-wide">
                 Legal
               </h4>
@@ -134,26 +134,6 @@ export function Footer() {
                   </li>
                 ))}
               </ul>
-            </div>
-
-            {/* Newsletter Column */}
-            <div className="lg:col-span-2">
-              <h4 className="font-heading font-semibold text-sm text-foreground mb-4 uppercase tracking-wide">
-                Stay Updated
-              </h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get the latest updates on AI diagnostics research.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:shadow-lg hover:shadow-primary/30 transition-shadow">
-                  Subscribe
-                </button>
-              </div>
             </div>
           </div>
         </div>

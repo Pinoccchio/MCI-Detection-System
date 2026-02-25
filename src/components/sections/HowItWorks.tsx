@@ -10,7 +10,7 @@ const steps = [
     icon: Upload,
     title: "Upload MRI Scans",
     description:
-      "Import DICOM format MRI scans directly into the system. Our platform supports batch uploads and automatic file validation for seamless integration.",
+      "Import NIfTI format hippocampal masks directly into the system. Our platform supports batch uploads and automatic file validation for seamless integration.",
     color: "from-blue-500 to-cyan-500",
     bgColor: "bg-blue-500/10",
   },
@@ -26,18 +26,18 @@ const steps = [
   {
     number: "03",
     icon: Cpu,
-    title: "Automated CNN Analysis",
+    title: "Automated ML Analysis",
     description:
-      "Our trained 2D CNN processes the hippocampal masks, extracting structural features and atrophy patterns to generate classification predictions.",
+      "Our ML model extracts 26 features from hippocampal masks including volumetry, morphology, and spatial patterns to generate classification predictions.",
     color: "from-amber-500 to-orange-500",
     bgColor: "bg-amber-500/10",
   },
   {
     number: "04",
     icon: Eye,
-    title: "Review Grad-CAM Results",
+    title: "Review Analysis Results",
     description:
-      "Examine detailed classification results with probability scores and interactive Grad-CAM heatmaps highlighting critical diagnostic features.",
+      "Examine detailed classification results with probability scores and feature importance analysis highlighting critical diagnostic factors.",
     color: "from-emerald-500 to-teal-500",
     bgColor: "bg-emerald-500/10",
   },
@@ -195,7 +195,7 @@ export function HowItWorks() {
                               <div className="space-y-3">
                                 <div className="flex items-center gap-3 bg-background/60 backdrop-blur-sm rounded-lg p-3">
                                   <div className="h-10 w-10 rounded bg-blue-500/20 flex items-center justify-center">
-                                    <span className="text-xs font-mono text-blue-600">DCM</span>
+                                    <span className="text-xs font-mono text-blue-600">NII</span>
                                   </div>
                                   <div className="flex-1 space-y-1">
                                     <div className="h-2 w-32 bg-blue-500/30 rounded" />
@@ -205,7 +205,7 @@ export function HowItWorks() {
                                 </div>
                                 <div className="flex items-center gap-3 bg-background/40 backdrop-blur-sm rounded-lg p-3 opacity-60">
                                   <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center">
-                                    <span className="text-xs font-mono text-blue-600">DCM</span>
+                                    <span className="text-xs font-mono text-blue-600">NII</span>
                                   </div>
                                   <div className="flex-1 space-y-1">
                                     <div className="h-2 w-28 bg-blue-500/20 rounded" />
@@ -274,7 +274,7 @@ export function HowItWorks() {
                           )}
 
                           {index === 2 && (
-                            // CNN Analysis - Neural Network Visualization
+                            // ML Analysis - Feature Processing Visualization
                             <div className="w-full space-y-6">
                               <div className="flex justify-center">
                                 <div className={`p-6 rounded-2xl bg-gradient-to-br ${step.bgColor}`}>
@@ -311,7 +311,7 @@ export function HowItWorks() {
                           )}
 
                           {index === 3 && (
-                            // Grad-CAM - Heatmap Visualization
+                            // Feature Importance - Analysis Visualization
                             <div className="w-full space-y-4">
                               <div className="relative w-48 h-48 mx-auto rounded-xl overflow-hidden border-2 border-emerald-500/30">
                                 {/* Base brain scan mockup */}

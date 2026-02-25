@@ -350,7 +350,7 @@ async function ResearcherDashboard() {
   const analysisStats = await getAnalysisStats();
 
   // Calculate estimated accuracy based on model characteristics
-  const estimatedAccuracy = 89; // Based on model's 87-91% training accuracy
+  const estimatedAccuracy = 81; // Based on model's actual test accuracy of 80.77%
 
   // Fetch recent analyses
   const { analyses } = await getAnalyses({ limit: 5 });
@@ -452,7 +452,7 @@ async function ResearcherDashboard() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Accuracy:</span>
-              <span className="font-medium text-green-600">87-91%</span>
+              <span className="font-medium text-green-600">~81%</span>
             </div>
           </div>
           <div className="space-y-3">

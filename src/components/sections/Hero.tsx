@@ -170,7 +170,7 @@ export function Hero() {
                 className="px-4 py-2 text-sm font-medium border border-primary/20 shadow-lg shadow-primary/10"
               >
                 <Sparkles className="h-3.5 w-3.5 mr-2 inline" />
-                AI-Powered Neuroimaging Analysis
+                ML-Powered Neuroimaging Analysis
               </Badge>
             </motion.div>
 
@@ -213,7 +213,7 @@ export function Hero() {
               transition={{ duration: 0.8, delay: 0.7, type: "spring", stiffness: 100 }}
               className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-10 leading-relaxed max-w-2xl"
             >
-              Advanced 2D CNN technology analyzes hippocampal-segmented MRI masks
+              Advanced ML technology analyzes hippocampal-segmented MRI masks
               to classify Mild Cognitive Impairment with{" "}
               <span className="text-foreground font-semibold">
                 clinical-grade precision
@@ -251,13 +251,6 @@ export function Hero() {
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform relative z-10" />
                 </Button>
               </motion.div>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-base px-8 h-12 border-2"
-              >
-                View Demo
-              </Button>
             </motion.div>
 
             {/* Trust Indicators */}
@@ -268,9 +261,9 @@ export function Hero() {
               className="grid grid-cols-1 xs:grid-cols-3 gap-4 sm:gap-6 max-w-xl mx-auto lg:mx-0"
             >
               {[
-                { value: "95%+", label: "Classification Accuracy" },
-                { value: "<2min", label: "Analysis Time" },
-                { value: "FDA", label: "Compliance Ready" },
+                { value: "81%", label: "Classification Accuracy" },
+                { value: "0.88", label: "ROC AUC Score" },
+                { value: "87%", label: "MCI Detection Rate" },
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
@@ -352,7 +345,7 @@ export function Hero() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground mb-1">Confidence</p>
-                        <p className="font-heading font-bold text-2xl text-foreground">94.2%</p>
+                        <p className="font-heading font-bold text-2xl text-foreground">86.7%</p>
                       </div>
                     </div>
                   </div>
@@ -384,7 +377,7 @@ export function Hero() {
                     </div>
                     <div className="bg-muted/30 rounded-lg p-3">
                       <p className="text-xs text-muted-foreground mb-1">Model</p>
-                      <p className="font-heading font-semibold text-sm">2D CNN</p>
+                      <p className="font-heading font-semibold text-sm">ML Model</p>
                     </div>
                   </div>
                 </div>

@@ -328,7 +328,7 @@ export function AnalyzeInterface({ scans, preSelectedScan, userId, userRole }: A
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Accuracy:</span>
-                  <span className="font-medium text-green-600">87-91%</span>
+                  <span className="font-medium text-green-600">~81%</span>
                 </div>
               </div>
             </div>
