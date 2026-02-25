@@ -25,6 +25,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 // ============================================================================
@@ -130,12 +131,17 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
 
       if (result.success) {
         setEditingUserId(null);
+        toast.success('User role updated successfully');
         router.refresh();
       } else {
-        setError(result.error || 'Failed to update role');
+        const errorMsg = result.error || 'Failed to update role';
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to update role');
+      const errorMsg = err.message || 'Failed to update role';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsUpdating(false);
     }
@@ -153,12 +159,17 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
       if (result.success) {
         setDeleteDialogOpen(false);
         setUserToDelete(null);
+        toast.success('User deleted successfully');
         router.refresh();
       } else {
-        setError(result.error || 'Failed to delete user');
+        const errorMsg = result.error || 'Failed to delete user';
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to delete user');
+      const errorMsg = err.message || 'Failed to delete user';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsUpdating(false);
     }
@@ -219,8 +230,8 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
                 className="px-3 py-2 rounded-lg border border-border bg-background text-sm min-w-[150px]"
               >
                 <option value="all">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="clinician">Clinician</option>
+                <option value="admin">Admin / Radiologist</option>
+                <option value="clinician">Clinician / Neurologist</option>
                 <option value="researcher">Researcher</option>
               </select>
             </div>
@@ -300,8 +311,8 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
                             className="px-2 py-1 border border-border rounded-md text-sm"
                             disabled={isUpdating}
                           >
-                            <option value="admin">Admin</option>
-                            <option value="clinician">Clinician</option>
+                            <option value="admin">Admin / Radiologist</option>
+                            <option value="clinician">Clinician / Neurologist</option>
                             <option value="researcher">Researcher</option>
                           </select>
                           <Button

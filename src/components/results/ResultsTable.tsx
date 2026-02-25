@@ -5,11 +5,12 @@
  * Displays analysis results with search and filtering
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnalysisResult } from '@/types/database';
 import { formatDateTime } from '@/lib/utils';
-import { Search, Eye, TrendingUp, TrendingDown, Filter, Download, FileSpreadsheet, FileJson } from 'lucide-react';
+import { Search, Eye, TrendingUp, TrendingDown, Filter, Download, FileSpreadsheet, FileJson, X, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -19,30 +20,46 @@ import { Button } from '@/components/ui/button';
 
 interface ResultsTableProps {
   analyses: any[];
+  initialPatientFilter?: string;
+  initialPatientName?: string | null;
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function ResultsTable({ analyses }: ResultsTableProps) {
+export function ResultsTable({ analyses, initialPatientFilter, initialPatientName }: ResultsTableProps) {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPrediction, setFilterPrediction] = useState<string>('all');
+  const [patientFilter, setPatientFilter] = useState<string | undefined>(initialPatientFilter);
+
+  // Pre-filter analyses by patient if filter is set
+  const patientFilteredAnalyses = useMemo(() => {
+    if (!patientFilter) return analyses;
+    return analyses.filter((analysis) => analysis.mri_scans?.patient_id === patientFilter);
+  }, [analyses, patientFilter]);
 
   // Filter analyses based on search and prediction filter
-  const filteredAnalyses = analyses.filter((analysis) => {
+  const filteredAnalyses = patientFilteredAnalyses.filter((analysis) => {
     const search = searchTerm.toLowerCase();
     const matchesSearch =
-      analysis.mri_scans?.patients?.full_name.toLowerCase().includes(search) ||
-      analysis.mri_scans?.patients?.patient_id.toLowerCase().includes(search) ||
-      analysis.mri_scans?.scan_type.toLowerCase().includes(search) ||
-      analysis.model_version.toLowerCase().includes(search);
+      analysis.mri_scans?.patients?.full_name?.toLowerCase().includes(search) ||
+      analysis.mri_scans?.patients?.patient_id?.toLowerCase().includes(search) ||
+      analysis.mri_scans?.scan_type?.toLowerCase().includes(search) ||
+      analysis.model_version?.toLowerCase().includes(search);
 
     const matchesPrediction =
       filterPrediction === 'all' || analysis.prediction === filterPrediction;
 
     return matchesSearch && matchesPrediction;
   });
+
+  // Clear patient filter and update URL
+  const clearPatientFilter = useCallback(() => {
+    setPatientFilter(undefined);
+    router.push('/dashboard/results');
+  }, [router]);
 
   // Export functions
   const exportToCSV = useCallback(() => {
@@ -96,6 +113,25 @@ export function ResultsTable({ analyses }: ResultsTableProps) {
 
   return (
     <div className="space-y-4">
+      {/* Patient Filter Indicator */}
+      {patientFilter && (
+        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <span className="text-sm text-blue-700 dark:text-blue-300">
+            Filtered by patient: <span className="font-semibold">{initialPatientName || patientFilter}</span>
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearPatientFilter}
+            className="ml-auto h-7 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/40"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Clear filter
+          </Button>
+        </div>
+      )}
+
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -252,8 +288,11 @@ export function ResultsTable({ analyses }: ResultsTableProps) {
       {/* Results count */}
       {filteredAnalyses.length > 0 && (
         <div className="text-sm text-muted-foreground">
-          Showing {filteredAnalyses.length} of {analyses.length} result
-          {analyses.length !== 1 ? 's' : ''}
+          Showing {filteredAnalyses.length} of {patientFilter ? patientFilteredAnalyses.length : analyses.length} result
+          {(patientFilter ? patientFilteredAnalyses.length : analyses.length) !== 1 ? 's' : ''}
+          {patientFilter && (
+            <span> for this patient</span>
+          )}
           {filterPrediction !== 'all' && (
             <span> (filtered by: {filterPrediction})</span>
           )}

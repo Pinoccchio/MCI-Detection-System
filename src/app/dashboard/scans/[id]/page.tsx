@@ -212,32 +212,21 @@ export default async function ScanDetailPage({ params }: { params: Promise<{ id:
               </div>
             )}
 
-            {/* Scan Viewer Placeholder */}
-            {scan.file_path && (
-              <div className="mt-6 pt-6 border-t border-border">
-                <h3 className="text-lg font-semibold mb-4">Scan Preview</h3>
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <ScanIcon className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">
-                      DICOM/NIfTI viewer coming soon
-                    </p>
-                    <p className="text-xs mt-1">
-                      Use download button to view in external software
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Back Button */}
+      {/* Back Button - Admins go to scans list, others go to patient details */}
       <div>
-        <Link href="/dashboard/scans">
-          <Button variant="ghost">← Back to Scans</Button>
-        </Link>
+        {user.profile.role === 'admin' ? (
+          <Link href="/dashboard/scans">
+            <Button variant="ghost">← Back to Scans</Button>
+          </Link>
+        ) : (
+          <Link href={`/dashboard/patients/${scan.patient_id}`}>
+            <Button variant="ghost">← Back to Patient</Button>
+          </Link>
+        )}
       </div>
     </div>
   );

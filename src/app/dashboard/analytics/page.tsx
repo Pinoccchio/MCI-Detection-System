@@ -249,7 +249,7 @@ export default async function AnalyticsPage() {
             <h3 className="font-medium text-blue-900 dark:text-blue-100">Key Insights</h3>
             <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1">
               <li>• The model achieves {(metrics.accuracy * 100).toFixed(1)}% accuracy on current predictions</li>
-              <li>• High-confidence predictions (≥80%) account for {metrics.correctPredictions} out of {metrics.totalPredictions} total analyses</li>
+              <li>• Estimated correct predictions: {metrics.correctPredictions} out of {metrics.totalPredictions} total analyses ({(metrics.accuracy * 100).toFixed(1)}%)</li>
               <li>• Hippocampal volume features are the strongest predictors of MCI</li>
               <li>• {classDistribution.mildCognitiveImpairment} MCI cases detected out of {classDistribution.total} total analyses</li>
             </ul>

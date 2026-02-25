@@ -104,6 +104,14 @@ export default async function ResultDetailPage({ params }: { params: Promise<{ i
               </div>
 
               <div className="flex items-start gap-3">
+                <Brain className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Analyzed</p>
+                  <p className="font-medium">{formatDateTime(analysis.created_at)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
                 <Activity className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Scan Type</p>

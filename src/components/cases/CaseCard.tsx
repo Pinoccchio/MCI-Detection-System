@@ -55,9 +55,9 @@ function getStatusBadge(caseData: PatientCaseSummary) {
       icon: AlertTriangle,
     };
   }
-  if (caseData.latest_analysis?.prediction === 'Normal') {
+  if (caseData.latest_analysis?.prediction === 'Cognitively Normal') {
     return {
-      label: 'Normal',
+      label: 'Cognitively Normal',
       className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
       icon: CheckCircle,
     };

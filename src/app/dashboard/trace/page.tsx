@@ -31,7 +31,8 @@ export default async function TracePage() {
   }
 
   // Fetch available scans for selection
-  const { scans, error } = await getScans({ status: 'completed', limit: 100 });
+  // Note: All uploaded scans are available for tracing (no status filter)
+  const { scans, error } = await getScans({ limit: 100 });
 
   return (
     <div className="space-y-6">

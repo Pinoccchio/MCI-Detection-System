@@ -5,9 +5,8 @@
  * Displays user information, notifications, and quick actions
  */
 
-import { Bell, LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { signOut } from '@/lib/auth/actions';
 import { useState } from 'react';
 
@@ -38,11 +37,8 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
+    await signOut();
+    // Note: signOut() redirects to '/' on success, so code after this won't execute
   };
 
   const getRoleBadgeColor = (role?: string) => {
@@ -97,15 +93,6 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
       {/* Right Side - Actions */}
       <div className="flex items-center gap-2">
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
-        </Button>
-
-        {/* Divider */}
-        <div className="h-8 w-px bg-border mx-2" />
-
         {/* User Menu */}
         <div className="relative">
           <button

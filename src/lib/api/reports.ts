@@ -428,8 +428,7 @@ export async function getReportStats(): Promise<{
     const { data, error } = await supabase.rpc('get_report_stats');
 
     if (error) {
-      console.error('[Reports API] Stats RPC error:', error.message);
-      // Fallback to individual queries if RPC not available
+      // RPC not available, use fallback (this is expected if RPC function not created)
       return await getReportStatsFallback();
     }
 

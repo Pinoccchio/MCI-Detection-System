@@ -22,9 +22,9 @@ export default async function BatchProcessingPage() {
     redirect('/dashboard');
   }
 
-  // Fetch available scans (completed status with files)
+  // Fetch available scans (all scans with files)
+  // Note: All uploaded scans are available for batch processing (no status filter)
   const { scans, total, error } = await getScans({
-    status: 'completed',
     limit: 200,
   });
 
@@ -117,7 +117,7 @@ export default async function BatchProcessingPage() {
             <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No scans available for batch processing</p>
             <p className="text-sm mt-2">
-              Upload MRI scans with completed status to enable batch analysis
+              Upload MRI scans to enable batch analysis
             </p>
           </div>
         ) : (

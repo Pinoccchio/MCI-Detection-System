@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { Patient, UserRole } from '@/types/database';
 import { formatDate } from '@/lib/utils';
 import { Search, Eye, Edit, Trash2, UserPlus, AlertTriangle, Filter, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -327,9 +328,14 @@ export function PatientTable({ patients, onDelete, userRole = 'admin' }: Patient
         variant="destructive"
         confirmText="Delete Patient"
         cancelText="Cancel"
-        onConfirm={() => {
+        onConfirm={async () => {
           if (patientToDelete && onDelete) {
-            onDelete(patientToDelete.id);
+            try {
+              await onDelete(patientToDelete.id);
+              toast.success('Patient deleted successfully');
+            } catch (error) {
+              toast.error('Failed to delete patient');
+            }
             setPatientToDelete(null);
           }
         }}

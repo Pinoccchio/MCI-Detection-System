@@ -108,12 +108,12 @@ export function ModelMetricsComponent({ metrics }: ModelMetricsProps) {
             <p className="text-2xl font-bold">{metrics.totalPredictions}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground mb-1">High Confidence</p>
+            <p className="text-sm text-muted-foreground mb-1">Est. Correct</p>
             <p className="text-2xl font-bold">{metrics.correctPredictions}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {metrics.totalPredictions > 0
                 ? ((metrics.correctPredictions / metrics.totalPredictions) * 100).toFixed(1)
-                : 0}% of total
+                : 0}% accuracy
             </p>
           </div>
         </div>

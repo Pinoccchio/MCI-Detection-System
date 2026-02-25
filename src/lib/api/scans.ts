@@ -353,6 +353,7 @@ export async function getScanStats(): Promise<{
   thisWeek: number;
   completed: number;
   pending: number;
+  failed: number;
   error?: string;
 }> {
   try {
@@ -362,8 +363,7 @@ export async function getScanStats(): Promise<{
     const { data, error } = await supabase.rpc('get_scan_stats');
 
     if (error) {
-      console.error('[Scans API] Stats RPC error:', error.message);
-      // Fallback to individual queries if RPC not available
+      // RPC not available, use fallback (this is expected if RPC function not created)
       return await getScanStatsFallback();
     }
 
@@ -372,6 +372,7 @@ export async function getScanStats(): Promise<{
       thisWeek: data?.this_week ?? 0,
       completed: data?.completed ?? 0,
       pending: data?.pending ?? 0,
+      failed: data?.failed ?? 0,
     };
   } catch (error: any) {
     console.error('[Scans API] Stats error:', error);
@@ -380,6 +381,7 @@ export async function getScanStats(): Promise<{
       thisWeek: 0,
       completed: 0,
       pending: 0,
+      failed: 0,
       error: error.message,
     };
   }
@@ -393,6 +395,7 @@ async function getScanStatsFallback(): Promise<{
   thisWeek: number;
   completed: number;
   pending: number;
+  failed: number;
   error?: string;
 }> {
   try {
@@ -424,11 +427,18 @@ async function getScanStatsFallback(): Promise<{
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
 
+    // Get failed/error count
+    const { count: failed } = await supabase
+      .from('mri_scans')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['failed', 'error']);
+
     return {
       total: total || 0,
       thisWeek: thisWeek || 0,
       completed: completed || 0,
       pending: pending || 0,
+      failed: failed || 0,
     };
   } catch (error: any) {
     console.error('[Scans API] Stats fallback error:', error);
@@ -437,6 +447,7 @@ async function getScanStatsFallback(): Promise<{
       thisWeek: 0,
       completed: 0,
       pending: 0,
+      failed: 0,
       error: error.message,
     };
   }

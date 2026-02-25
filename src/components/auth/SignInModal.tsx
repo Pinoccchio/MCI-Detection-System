@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { signInSchema, type SignInFormData } from "@/lib/validations/auth";
 import { signIn } from "@/lib/auth/actions";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -58,17 +59,21 @@ export function SignInModal({
 
       if (!result.success && result.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
 
       // Success - close modal and redirect to dashboard
+      toast.success('Welcome back!');
       reset();
       onOpenChange(false);
       router.push('/dashboard');
       router.refresh(); // Refresh to get updated auth state
     } catch (err: any) {
       console.error('Sign in error:', err);
-      setError(err.message || 'An unexpected error occurred');
+      const errorMessage = err.message || 'An unexpected error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

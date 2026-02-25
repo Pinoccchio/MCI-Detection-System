@@ -6,9 +6,10 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth/actions';
-import { getReports } from '@/lib/api/reports';
+import { getReports, getReportStats } from '@/lib/api/reports';
+import { getPatientById } from '@/lib/api/patients';
 import { formatDateTime } from '@/lib/utils';
-import { FileText, Brain } from 'lucide-react';
+import { FileText, Brain, Stethoscope, FlaskConical, Calendar, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportActions } from '@/components/reports/ReportActions';
 
@@ -16,7 +17,11 @@ import { ReportActions } from '@/components/reports/ReportActions';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function ReportsPage() {
+interface ReportsPageProps {
+  searchParams: Promise<{ patient?: string }>;
+}
+
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // Check authentication
   const user = await getCurrentUser();
 
@@ -24,8 +29,24 @@ export default async function ReportsPage() {
     redirect('/');
   }
 
-  // Fetch reports
-  const { reports, error } = await getReports();
+  // Read patient filter from URL params
+  const params = await searchParams;
+  const patientFilterId = params.patient;
+
+  // Fetch reports, stats, and patient info (if filtering) in parallel
+  const [{ reports: allReports, error }, stats, patientResult] = await Promise.all([
+    getReports(),
+    getReportStats(),
+    patientFilterId ? getPatientById(patientFilterId) : Promise.resolve({ patient: null }),
+  ]);
+
+  // Get patient name for display in filter indicator
+  const patientFilterName = patientResult.patient?.full_name || null;
+
+  // Filter reports by patient if filter is set
+  const reports = patientFilterId
+    ? allReports.filter((report: any) => report.analysis_results?.mri_scans?.patient_id === patientFilterId)
+    : allReports;
 
   return (
     <div className="space-y-6">
@@ -41,6 +62,73 @@ export default async function ReportsPage() {
           </p>
         </div>
       </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="font-semibold">Total Reports</h3>
+          </div>
+          <p className="text-3xl font-bold">{stats.total}</p>
+          <p className="text-sm text-muted-foreground mt-1">All time</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+              <Stethoscope className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <h3 className="font-semibold">Clinical Reports</h3>
+          </div>
+          <p className="text-3xl font-bold">{stats.clinical}</p>
+          <p className="text-sm text-muted-foreground mt-1">For patient care</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <FlaskConical className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="font-semibold">Research Reports</h3>
+          </div>
+          <p className="text-3xl font-bold">{stats.research}</p>
+          <p className="text-sm text-muted-foreground mt-1">For studies</p>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="font-semibold">This Month</h3>
+          </div>
+          <p className="text-3xl font-bold">{stats.thisMonth}</p>
+          <p className="text-sm text-muted-foreground mt-1">Recent activity</p>
+        </div>
+      </div>
+
+      {/* Patient Filter Indicator */}
+      {patientFilterId && (
+        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <span className="text-sm text-blue-700 dark:text-blue-300">
+            Filtered by patient: <span className="font-semibold">{patientFilterName || patientFilterId}</span>
+          </span>
+          <Link href="/dashboard/reports" className="ml-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/40"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Clear filter
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -169,7 +257,8 @@ export default async function ReportsPage() {
       {/* Results count */}
       {reports.length > 0 && (
         <div className="text-sm text-muted-foreground">
-          Showing {reports.length} report{reports.length !== 1 ? 's' : ''}
+          Showing {reports.length} of {allReports.length} report{allReports.length !== 1 ? 's' : ''}
+          {patientFilterId && <span> for this patient</span>}
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { UserPlus, CheckCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { signUpSchema, type SignUpFormData, roleOptions } from "@/lib/validations/auth";
 import { signUp } from "@/lib/auth/actions";
+import { toast } from "sonner";
 import { UserRole } from "@/types/database";
 import {
   Dialog,
@@ -93,6 +94,7 @@ export function SignUpModal({
 
       if (!result.success && result.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
 
@@ -102,10 +104,12 @@ export function SignUpModal({
 
       // If email confirmation required, show message and keep modal open
       if (result.requiresEmailConfirmation) {
+        toast.success('Account created! Please check your email to confirm.');
         // Don't close modal - user needs to see confirmation message
         return;
       }
 
+      toast.success('Account created successfully!');
       // Otherwise redirect to sign in after short delay
       timeoutRef.current = setTimeout(() => {
         reset();
@@ -114,7 +118,9 @@ export function SignUpModal({
       }, 2000);
     } catch (err: any) {
       console.error('Sign up error:', err);
-      setError(err.message || 'An unexpected error occurred');
+      const errorMessage = err.message || 'An unexpected error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

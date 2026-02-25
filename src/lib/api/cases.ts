@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { DB_PREDICTIONS } from '@/lib/utils/prediction-mapper';
 
 // Default query limit to prevent memory overflow
 const DEFAULT_LIMIT = 50;
@@ -185,7 +186,7 @@ export async function getCasesWithSummary(options?: {
           case 'completed':
             return c.analysis_count > 0;
           case 'mci':
-            return c.latest_analysis?.prediction === 'Mild Cognitive Impairment';
+            return c.latest_analysis?.prediction === DB_PREDICTIONS.MCI;
           default:
             return true;
         }
@@ -326,7 +327,7 @@ async function getCaseStatsFallback(): Promise<CaseStats> {
 
       const hasAnalyses = patientAnalyses.length > 0;
       const hasMCI = patientAnalyses.some(
-        (a) => a.prediction === 'Mild Cognitive Impairment'
+        (a) => a.prediction === DB_PREDICTIONS.MCI
       );
 
       if (hasScans) active++;

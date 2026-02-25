@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Loader2, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { saveProfile } from './actions';
 
 // ============================================================================
@@ -82,12 +83,15 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
       if (!result.success) {
         setStatus('error');
-        setErrorMessage(result.error || 'Failed to update profile');
+        const errorMsg = result.error || 'Failed to update profile';
+        setErrorMessage(errorMsg);
+        toast.error(errorMsg);
         return;
       }
 
       setStatus('success');
       reset(data); // Reset form state with current data as new baseline
+      toast.success('Profile updated successfully');
 
       // Reset status after 3 seconds
       setTimeout(() => {
@@ -96,7 +100,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     } catch (err: any) {
       console.error('Profile update error:', err);
       setStatus('error');
-      setErrorMessage(err.message || 'An unexpected error occurred');
+      const errorMsg = err.message || 'An unexpected error occurred';
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     }
   };
 

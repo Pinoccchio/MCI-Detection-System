@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { AnalysisResult } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+import { DB_PREDICTIONS } from '@/lib/utils/prediction-mapper';
 
 // ============================================================================
 // TYPES
@@ -285,6 +286,7 @@ export async function getAnalysisStats(): Promise<{
   total: number;
   thisWeek: number;
   mciDetected: number;
+  normalCount: number;
   avgConfidence: number;
   error?: string;
 }> {
@@ -295,15 +297,25 @@ export async function getAnalysisStats(): Promise<{
     const { data, error } = await supabase.rpc('get_analysis_stats');
 
     if (error) {
-      console.error('[Analyses API] Stats RPC error:', error.message);
-      // Fallback to individual queries if RPC not available
+      // RPC not available, use fallback (this is expected if RPC function not created)
       return await getAnalysisStatsFallback();
+    }
+
+    // Get normal count separately if RPC doesn't return it
+    let normalCount = data?.normal_count;
+    if (normalCount === undefined || normalCount === null) {
+      const { count } = await supabase
+        .from('analysis_results')
+        .select('*', { count: 'exact', head: true })
+        .eq('prediction', DB_PREDICTIONS.NORMAL);
+      normalCount = count || 0;
     }
 
     return {
       total: data?.total ?? 0,
       thisWeek: data?.this_week ?? 0,
       mciDetected: data?.mci_detected ?? 0,
+      normalCount: normalCount,
       avgConfidence: data?.avg_confidence ?? 0,
     };
   } catch (error: any) {
@@ -312,6 +324,7 @@ export async function getAnalysisStats(): Promise<{
       total: 0,
       thisWeek: 0,
       mciDetected: 0,
+      normalCount: 0,
       avgConfidence: 0,
       error: error.message,
     };
@@ -325,6 +338,7 @@ async function getAnalysisStatsFallback(): Promise<{
   total: number;
   thisWeek: number;
   mciDetected: number;
+  normalCount: number;
   avgConfidence: number;
   error?: string;
 }> {
@@ -349,7 +363,13 @@ async function getAnalysisStatsFallback(): Promise<{
     const { count: mciDetected } = await supabase
       .from('analysis_results')
       .select('*', { count: 'exact', head: true })
-      .eq('prediction', 'Mild Cognitive Impairment');
+      .eq('prediction', DB_PREDICTIONS.MCI);
+
+    // Get Normal count
+    const { count: normalCount } = await supabase
+      .from('analysis_results')
+      .select('*', { count: 'exact', head: true })
+      .eq('prediction', DB_PREDICTIONS.NORMAL);
 
     // Get average confidence - limit to prevent memory issues
     const { data: allAnalyses } = await supabase
@@ -367,6 +387,7 @@ async function getAnalysisStatsFallback(): Promise<{
       total: total || 0,
       thisWeek: thisWeek || 0,
       mciDetected: mciDetected || 0,
+      normalCount: normalCount || 0,
       avgConfidence: Math.round(avgConfidence * 100) / 100,
     };
   } catch (error: any) {
@@ -375,6 +396,7 @@ async function getAnalysisStatsFallback(): Promise<{
       total: 0,
       thisWeek: 0,
       mciDetected: 0,
+      normalCount: 0,
       avgConfidence: 0,
       error: error.message,
     };

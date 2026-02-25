@@ -33,7 +33,8 @@ export default async function AnalyzePage({ searchParams }: AnalyzePageProps) {
   }
 
   // Get available scans
-  const { scans } = await getScans({ status: 'completed' });
+  // Note: All uploaded scans are available for analysis (no status filter)
+  const { scans } = await getScans({});
 
   // Find pre-selected scan if ID provided
   const preSelectedScan = params.scan
@@ -50,7 +51,7 @@ export default async function AnalyzePage({ searchParams }: AnalyzePageProps) {
         <div>
           <h1 className="text-3xl font-bold">MCI Analysis</h1>
           <p className="text-muted-foreground mt-1">
-            Run AI-powered analysis on MRI scans using trained Random Forest model
+            Run AI-powered analysis on MRI scans using trained Gradient Boosting model
           </p>
         </div>
       </div>
@@ -62,6 +63,7 @@ export default async function AnalyzePage({ searchParams }: AnalyzePageProps) {
           scans={scans}
           preSelectedScan={preSelectedScan}
           userId={user.id}
+          userRole={user.profile.role}
         />
 
         {/* Batch Analysis */}

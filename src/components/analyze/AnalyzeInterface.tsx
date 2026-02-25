@@ -13,6 +13,7 @@ import { createAnalysis } from '@/lib/api/analyses';
 import { getSignedUrl } from '@/lib/storage/upload';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   Brain,
   Loader2,
@@ -32,6 +33,7 @@ interface AnalyzeInterfaceProps {
   scans: any[];
   preSelectedScan: any | null;
   userId: string;
+  userRole: string;
 }
 
 type AnalysisStatus = 'idle' | 'fetching-file' | 'analyzing' | 'saving' | 'complete' | 'error';
@@ -40,7 +42,7 @@ type AnalysisStatus = 'idle' | 'fetching-file' | 'analyzing' | 'saving' | 'compl
 // COMPONENT
 // ============================================================================
 
-export function AnalyzeInterface({ scans, preSelectedScan, userId }: AnalyzeInterfaceProps) {
+export function AnalyzeInterface({ scans, preSelectedScan, userId, userRole }: AnalyzeInterfaceProps) {
   const router = useRouter();
   const [selectedScan, setSelectedScan] = useState<any>(preSelectedScan);
   const [status, setStatus] = useState<AnalysisStatus>('idle');
@@ -131,10 +133,13 @@ export function AnalyzeInterface({ scans, preSelectedScan, userId }: AnalyzeInte
       setAnalysisId(saveResult.data?.id);
       setProgress(100);
       setStatus('complete');
+      toast.success('Analysis complete');
     } catch (err: any) {
       console.error('Analysis error:', err);
-      setError(err.message || 'Analysis failed');
+      const errorMessage = err.message || 'Analysis failed';
+      setError(errorMessage);
       setStatus('error');
+      toast.error(errorMessage);
     }
   };
 
@@ -387,11 +392,13 @@ export function AnalyzeInterface({ scans, preSelectedScan, userId }: AnalyzeInte
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <Button onClick={handleViewResults} className="flex-1">
-              <FileText className="h-4 w-4 mr-2" />
-              View Detailed Results
-            </Button>
-            <Button variant="outline" onClick={handleReset}>
+            {userRole !== 'researcher' && (
+              <Button onClick={handleViewResults} className="flex-1">
+                <FileText className="h-4 w-4 mr-2" />
+                View Detailed Results
+              </Button>
+            )}
+            <Button variant="outline" onClick={handleReset} className={userRole === 'researcher' ? 'flex-1' : ''}>
               Analyze Another Scan
             </Button>
           </div>

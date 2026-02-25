@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { createReport } from '@/lib/api/reports';
 import { FileText, Loader2, CheckCircle } from 'lucide-react';
 
@@ -62,8 +63,10 @@ export function ReportGenerator({
 
       if (!result.success) {
         console.error('[ReportGenerator] Failed to create report:', result.error);
-        setError(result.error || 'Failed to create report in database');
+        const errorMsg = result.error || 'Failed to create report in database';
+        setError(errorMsg);
         setStatus('error');
+        toast.error(errorMsg);
         return;
       }
 
@@ -73,12 +76,15 @@ export function ReportGenerator({
       }
 
       setStatus('success');
+      toast.success('Report generated successfully');
 
       // Don't auto-reset - let user see the success message with link
     } catch (err: any) {
       console.error('[ReportGenerator] Unexpected error:', err);
-      setError(err.message || 'Failed to generate report');
+      const errorMsg = err.message || 'Failed to generate report';
+      setError(errorMsg);
       setStatus('error');
+      toast.error(errorMsg);
     }
   };
 

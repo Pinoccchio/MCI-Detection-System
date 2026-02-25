@@ -25,7 +25,6 @@ interface Scan {
   file_path: string | null;
   file_type: string | null;
   file_size: number | null;
-  status: string;
   created_at: string;
   patients?: {
     full_name: string;
@@ -44,7 +43,6 @@ interface ScansTableProps {
 
 export function ScansTable({ scans, onDelete }: ScansTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [scanTypeFilter, setScanTypeFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -65,15 +63,9 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
         scan.patients?.full_name.toLowerCase().includes(search) ||
         scan.patients?.patient_id.toLowerCase().includes(search) ||
         scan.scan_type.toLowerCase().includes(search) ||
-        scan.file_type?.toLowerCase().includes(search) ||
-        scan.status.toLowerCase().includes(search);
+        scan.file_type?.toLowerCase().includes(search);
 
       if (!matchesSearch) return false;
-
-      // Status filter
-      if (statusFilter !== 'all' && scan.status !== statusFilter) {
-        return false;
-      }
 
       // Scan type filter
       if (scanTypeFilter !== 'all' && scan.scan_type !== scanTypeFilter) {
@@ -82,29 +74,14 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
 
       return true;
     });
-  }, [scans, searchTerm, statusFilter, scanTypeFilter]);
+  }, [scans, searchTerm, scanTypeFilter]);
 
   const activeFiltersCount = [
-    statusFilter !== 'all',
     scanTypeFilter !== 'all',
   ].filter(Boolean).length;
 
   const clearFilters = () => {
-    setStatusFilter('all');
     setScanTypeFilter('all');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'processing':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'failed':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
-    }
   };
 
   return (
@@ -116,7 +93,7 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search scans by patient, type, status..."
+              placeholder="Search scans by patient, type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -159,23 +136,7 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 gap-4">
             {/* Scan Type Filter */}
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">Scan Type</label>
@@ -217,9 +178,6 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Scan Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Status
-                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
@@ -228,7 +186,7 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
             <tbody className="bg-card divide-y divide-border">
               {filteredScans.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                     {searchTerm ? 'No scans found matching your search' : 'No scans yet'}
                   </td>
                 </tr>
@@ -258,15 +216,6 @@ export function ScansTable({ scans, onDelete }: ScansTableProps) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatDateTime(scan.scan_date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(
-                          scan.status
-                        )}`}
-                      >
-                        {scan.status}
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-1">

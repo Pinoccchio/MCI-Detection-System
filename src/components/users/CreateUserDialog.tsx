@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { addUser } from '@/app/dashboard/users/actions';
+import { toast } from 'sonner';
 import { UserPlus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '@/types/database';
 
@@ -127,13 +128,18 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
       if (result.success) {
         setFormData(initialFormData);
+        toast.success('User created successfully');
         onOpenChange(false);
         router.refresh();
       } else {
-        setError(result.error || 'Failed to create user');
+        const errorMsg = result.error || 'Failed to create user';
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+      const errorMsg = err.message || 'An unexpected error occurred';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -149,7 +155,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -251,9 +257,9 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                 disabled={isSubmitting}
                 className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="clinician">Clinician</option>
+                <option value="admin">Admin / Radiologist</option>
+                <option value="clinician">Clinician / Neurologist</option>
                 <option value="researcher">Researcher</option>
-                <option value="admin">Admin</option>
               </select>
             </div>
 

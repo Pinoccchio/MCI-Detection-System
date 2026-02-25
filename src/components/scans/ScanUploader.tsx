@@ -8,6 +8,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, X, File, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { createScan } from '@/lib/api/scans';
 import { uploadMRIScan } from '@/lib/storage/upload';
@@ -187,6 +188,7 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
 
       setUploadProgress(100);
       setUploadStatus('success');
+      toast.success('Scan uploaded successfully');
 
       // Redirect after success
       timeoutRef.current = setTimeout(() => {
@@ -200,8 +202,10 @@ export function ScanUploader({ patientId, patientName, onComplete }: ScanUploade
 
     } catch (err: any) {
       console.error('Upload error:', err);
-      setError(err.message || 'Upload failed');
+      const errorMessage = err.message || 'Upload failed';
+      setError(errorMessage);
       setUploadStatus('error');
+      toast.error(errorMessage);
     }
   };
 

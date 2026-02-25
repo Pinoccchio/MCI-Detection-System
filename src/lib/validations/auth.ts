@@ -62,7 +62,7 @@ export const signUpSchema = z
 
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 
-// Role options for dropdown
+// Role options for dropdown (consistent order: Admin → Clinician → Researcher)
 export const roleOptions = [
   {
     value: "",

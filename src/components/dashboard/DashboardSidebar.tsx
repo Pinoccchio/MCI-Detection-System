@@ -222,9 +222,15 @@ export function DashboardSidebar({ role }: DashboardSidebarProps) {
             const Icon = item.icon;
             // Check if current path matches this nav item (including nested routes)
             // Special case for Overview (/dashboard) - only match exactly to avoid matching all routes
-            const isActive = item.href === '/dashboard'
+            // Special case for Patients: also highlight when viewing scans (clinicians access scans via patients)
+            let isActive = item.href === '/dashboard'
               ? pathname === '/dashboard'
               : pathname === item.href || pathname.startsWith(item.href + '/');
+
+            // For clinicians viewing scan details, highlight "Patients" since they came from there
+            if (item.href === '/dashboard/patients' && role === 'clinician' && pathname.startsWith('/dashboard/scans/')) {
+              isActive = true;
+            }
 
             const navLink = (
               <Link

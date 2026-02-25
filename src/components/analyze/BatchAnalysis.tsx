@@ -11,6 +11,7 @@ import { createAnalysis } from '@/lib/api/analyses';
 import { getSignedUrl } from '@/lib/storage/upload';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   Brain,
   Loader2,
@@ -189,6 +190,15 @@ export function BatchAnalysis({ scans, userId }: BatchAnalysisProps) {
     }
 
     setIsRunning(false);
+
+    // Show completion toast
+    const finalCompleted = progress.filter((p) => p.status === 'completed').length;
+    const finalErrors = progress.filter((p) => p.status === 'error').length;
+    if (finalErrors > 0) {
+      toast.error(`Batch analysis completed with ${finalErrors} error(s)`);
+    } else {
+      toast.success(`Batch analysis complete: ${finalCompleted} scans analyzed`);
+    }
   };
 
   const pauseAnalysis = () => {

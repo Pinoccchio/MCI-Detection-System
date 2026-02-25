@@ -12,6 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Patient, CreatePatientInput } from '@/types/database';
 import { createPatient, updatePatient } from '@/lib/api/patients';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -95,16 +96,21 @@ export function PatientForm({ patient, mode }: PatientFormProps) {
       }
 
       if (!result?.success) {
-        setError(result?.error || 'An error occurred');
+        const errorMessage = result?.error || 'An error occurred';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
       // Success - redirect to patients list
+      toast.success(mode === 'create' ? 'Patient created successfully' : 'Patient updated successfully');
       router.push('/dashboard/patients');
       router.refresh();
     } catch (err: any) {
       console.error('Form submission error:', err);
-      setError(err.message || 'An unexpected error occurred');
+      const errorMessage = err.message || 'An unexpected error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
