@@ -100,20 +100,104 @@ export async function parseNIfTI(
 }
 
 /**
+ * Options for fetchAndParseNIfTI
+ */
+export interface FetchNIfTIOptions {
+  /** Timeout in milliseconds (default: 60000 = 60 seconds) */
+  timeoutMs?: number;
+  /** AbortSignal for external cancellation */
+  signal?: AbortSignal;
+  /** Progress callback for download tracking */
+  onProgress?: (loaded: number, total: number) => void;
+}
+
+/**
  * Fetch a NIfTI file from a URL and parse it
+ * Supports timeout, abort signal, and progress tracking for large files
  */
 export async function fetchAndParseNIfTI(
   signedUrl: string,
-  filename: string
+  filename: string,
+  options?: FetchNIfTIOptions
 ): Promise<NIfTIData> {
-  const response = await fetch(signedUrl);
+  const timeoutMs = options?.timeoutMs ?? 60000; // 60 second default
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch NIfTI file: ${response.statusText}`);
+  // Combine with external signal if provided
+  let signal: AbortSignal;
+  if (options?.signal) {
+    // Create a combined abort signal
+    const combinedController = new AbortController();
+
+    // Abort if either signal fires
+    const abortHandler = () => combinedController.abort();
+    controller.signal.addEventListener('abort', abortHandler);
+    options.signal.addEventListener('abort', abortHandler);
+
+    // If external signal is already aborted, abort immediately
+    if (options.signal.aborted) {
+      combinedController.abort();
+    }
+
+    signal = combinedController.signal;
+  } else {
+    signal = controller.signal;
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  return parseNIfTI(arrayBuffer, filename);
+  try {
+    const response = await fetch(signedUrl, { signal });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch NIfTI file: ${response.statusText}`);
+    }
+
+    // Get content length for progress
+    const contentLength = response.headers.get('content-length');
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+    // If progress callback and content-length available, stream with progress
+    if (options?.onProgress && total > 0 && response.body) {
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let loaded = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        options.onProgress(loaded, total);
+      }
+
+      // Combine chunks into single ArrayBuffer
+      const arrayBuffer = new Uint8Array(loaded);
+      let offset = 0;
+      for (const chunk of chunks) {
+        arrayBuffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+      return parseNIfTI(arrayBuffer.buffer, filename);
+    }
+
+    // Fallback to simple arrayBuffer() if no progress needed
+    const arrayBuffer = await response.arrayBuffer();
+    return parseNIfTI(arrayBuffer, filename);
+  } catch (err: unknown) {
+    // Provide more helpful error messages
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        // Check if it was a timeout or user cancellation
+        if (options?.signal?.aborted) {
+          throw new Error('Loading cancelled');
+        }
+        throw new Error(`Loading timed out after ${timeoutMs / 1000} seconds`);
+      }
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**

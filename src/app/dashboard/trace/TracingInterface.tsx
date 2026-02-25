@@ -34,6 +34,7 @@ import {
 import type { MRIScan, AnalysisResult, MaskCorrection } from '@/types/database';
 import { getSignedUrl } from '@/lib/storage/upload';
 import { fetchAndParseNIfTI, type NIfTIData } from '@/lib/nifti/parser';
+import { formatFileSize } from '@/lib/utils';
 
 interface TracingInterfaceProps {
   scans: MRIScan[];
@@ -85,12 +86,14 @@ function generateDemoData(): { data: number[][][]; dimensions: [number, number, 
 
 export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
   const tracingCanvasRef = useRef<TracingCanvasRef>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // State
   const [selectedScan, setSelectedScan] = useState<MRIScan | null>(null);
   const [imageData, setImageData] = useState<number[][][] | null>(null);
   const [dimensions, setDimensions] = useState<[number, number, number]>([64, 64, 48]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [maskStats, setMaskStats] = useState<{
@@ -123,6 +126,13 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
     setImageData(demo.data);
     setDimensions(demo.dimensions);
     setCurrentSlice(Math.floor(demo.dimensions[2] / 2));
+  }, []);
+
+  // Cleanup: abort any in-progress fetch on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
   // Fetch corrections for a scan
@@ -196,12 +206,27 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
     setLoadedCorrectionId(null);
   };
 
+  // Handle cancel loading
+  const handleCancelLoading = () => {
+    abortControllerRef.current?.abort();
+    setIsLoading(false);
+    setLoadingProgress(null);
+    setError('Loading cancelled');
+  };
+
   // Handle scan selection
   const handleScanSelect = async (scan: MRIScan) => {
+    // Abort any previous loading
+    abortControllerRef.current?.abort();
+
     setSelectedScan(scan);
     setShowScanSelector(false);
     setError(null);
     setIsLoading(true);
+    setLoadingProgress(null);
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
 
     try {
       // Fetch the actual NIfTI file from Supabase storage
@@ -229,8 +254,14 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
         throw new Error(urlResult.error || 'Failed to get scan URL');
       }
 
-      // Fetch and parse the NIfTI file (this is the slowest operation)
-      const niftiData = await fetchAndParseNIfTI(urlResult.url, scan.file_path);
+      // Fetch and parse the NIfTI file with timeout, abort signal, and progress tracking
+      const niftiData = await fetchAndParseNIfTI(urlResult.url, scan.file_path, {
+        timeoutMs: 120000, // 2 minutes for large files
+        signal: abortControllerRef.current.signal,
+        onProgress: (loaded, total) => {
+          setLoadingProgress({ loaded, total });
+        },
+      });
 
       // Store mask statistics for display
       if (niftiData.stats) {
@@ -270,11 +301,17 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
 
       // Clear existing tracings
       tracingCanvasRef.current?.clearTracing();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      // Don't show error if it was a cancellation
+      if (err instanceof Error && err.message === 'Loading cancelled') {
+        // Error already set in handleCancelLoading
+        return;
+      }
       console.error('Failed to load scan:', err);
-      setError(err.message || 'Failed to load scan');
+      setError(err instanceof Error ? err.message : 'Failed to load scan');
     } finally {
       setIsLoading(false);
+      setLoadingProgress(null);
     }
   };
 
@@ -506,6 +543,27 @@ export function TracingInterface({ scans, userId }: TracingInterfaceProps) {
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
                   <p className="text-muted-foreground">Loading scan...</p>
+                  {loadingProgress && loadingProgress.total > 0 && (
+                    <div className="mt-3 w-48 mx-auto">
+                      <div className="h-2 bg-muted-foreground/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${(loadingProgress.loaded / loadingProgress.total) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatFileSize(loadingProgress.loaded)} / {formatFileSize(loadingProgress.total)}
+                      </p>
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelLoading}
+                    className="mt-4"
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </div>
             ) : imageData ? (
